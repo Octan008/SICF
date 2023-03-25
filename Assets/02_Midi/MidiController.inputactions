@@ -1,0 +1,46 @@
+{
+    "name": "MidiController",
+    "maps": [
+        {
+            "name": "MidiController",
+            "id": "feb5d7ea-4fe6-40b7-a8df-1318fb4e002c",
+            "actions": [
+                {
+                    "name": "MainFader",
+                    "type": "Value",
+                    "id": "95797919-0c15-4db9-831b-fe220cad4d01",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "32473bfb-288c-4e13-8c9f-234d295ae923",
+                    "path": "<MidiDevice>/note031",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Midi",
+                    "action": "MainFader",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": [
+        {
+            "name": "Midi",
+            "bindingGroup": "Midi",
+            "devices": [
+                {
+                    "devicePath": "<MidiDevice>",
+                    "isOptional": false,
+                    "isOR": false
+                }
+            ]
+        }
+    ]
+}
