@@ -14,6 +14,7 @@ Shader "Unlit/Camera"
         LOD 100
 
         Blend SrcAlpha OneMinusSrcAlpha
+        ZWrite Off Cull Off ZTest LEqual Fog { Mode Off }
 
         Pass
         {
@@ -24,6 +25,7 @@ Shader "Unlit/Camera"
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
+            
 
             struct appdata
             {

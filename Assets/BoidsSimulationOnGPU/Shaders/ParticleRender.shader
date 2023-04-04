@@ -19,6 +19,7 @@
 		struct Input
 		{
 			float2 uv_MainTex;
+			
 		};
 		// Boidの構造体
 		struct BoidData

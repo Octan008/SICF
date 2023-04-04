@@ -11,8 +11,8 @@ public class OperationBase : MonoBehaviour
    public float _CirclePhase = 0.0f;
    public float _textTargetPhase = 0.0f;
    public Texture2D texA, texB;
-   public RenderTexture texC;
-
+   // public RenderTexture texC;
+   public  Texture2D texC;
     public void SetTitleIntensity(float value) {
        Debug.Log("Value: " + value);
     }

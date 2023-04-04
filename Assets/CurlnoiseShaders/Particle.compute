@@ -240,23 +240,24 @@ void IntegrateCS
 	if(_Circle > 0.99) circlePhase = 1;
 	b.size = circlePhase;
 	float targetPhase = 1-circlePhase;
-	float3 target = lerp(b.target, target_text, max(_textTargetWeight, circlePhase));
+	// float3 target = lerp(b.target, target_text, max(_textTargetWeight, circlePhase));
+	float3 target = b.target;
 
-	circlePhase = max(0, circlePhase - _textTargetWeight);
+	// circlePhase = max(0, circlePhase - _textTargetWeight);
 
 	
 	
 	// // 壁に近づいたら反発する力を与える
 	force += avoidWall(b.position) * _AvoidWallWeight; 
 	
-	force += CurlNoise(b.position, _DeltaTime) *  circlePhase * _CurlNoiseWeight;
-	force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
+	force += CurlNoise(b.position, _DeltaTime) *  circlePhase * _CurlNoiseWeight * 10;
+	force += (targetForce(b.position, target) *10 - b.velocity*5) * _textTargetWeight;//* _TargetWeight;
 	float lw = min(2.0, 1.0/max(0.0001, length(b.position-target)));
 	// force += (targetForce(b.position, b.target) *10 - b.velocity*5*lw) * _textTargetWeight;//* _TargetWeight;
 
 
 	float4 tmp_color1 = lerp(b.color1, _tex0.SampleLevel(linearClampSampler, b.uv1, 0), 0.9);
-	float4 tmp_color2 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv2, 0), 0.9);
+	float4 tmp_color2 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv1, 0), 0.9);
 
 	float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
 	float4 tmp_color3 = _tex0.SampleLevel(linearClampSampler, location_uv, 0);

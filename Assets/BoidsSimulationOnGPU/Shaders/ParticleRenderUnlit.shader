@@ -95,19 +95,25 @@ Shader "Unlit/ParticleRenderUnlit"
                 float3 scl = _ObjectScale * boidData.size;          // Boidのスケールを取得
 
                 // オブジェクト座標からワールド座標に変換する行列を定義
+                float3 camDir = -normalize(_WorldSpaceCameraPos - pos);
                 float4x4 object2world = (float4x4)0; 
                 // スケール値を代入
                 object2world._11_22_33_44 = float4(scl.xyz, 1.0);
                 // 速度からY軸についての回転を算出
+                // float rotY = 
+                //     atan2(boidData.velocity.x, boidData.velocity.z);
+                // // 速度からX軸についての回転を算出
+                // float rotX = 
+                //     -asin(boidData.velocity.y / (length(boidData.velocity.xyz) + 1e-8));
                 float rotY = 
-                    atan2(boidData.velocity.x, boidData.velocity.z);
+                    atan2(camDir.x, camDir.z);
                 // 速度からX軸についての回転を算出
                 float rotX = 
-                    -asin(boidData.velocity.y / (length(boidData.velocity.xyz) + 1e-8));
+                    -asin(camDir.y / (length(camDir) + 1e-8));
                 // オイラー角（ラジアン）から回転行列を求める
                 float4x4 rotMatrix = eulerAnglesToRotationMatrix(float3(rotX, rotY, 0));
                 // 行列に回転を適用
-                // object2world = mul(rotMatrix, object2world);
+                object2world = mul(rotMatrix, object2world);
                 // 行列に位置（平行移動）を適用
                 object2world._14_24_34 += pos.xyz;
 
@@ -118,8 +124,8 @@ Shader "Unlit/ParticleRenderUnlit"
                 // #endif
                 o.uv = v.uv;    
                 o.vertex = v.vertex;
-                // o.vertex = UnityObjectToClipPos(v.vertex);
-                o.vertex = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, 0, 1)) + float4(v.vertex.x, v.vertex.y, 0, 0));
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                // o.vertex = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, 0, 1)) + float4(v.vertex.x, v.vertex.y, 0, 0));
                 o.InstanceId = v.InstanceId;
                 return o;
             }
@@ -129,7 +135,7 @@ Shader "Unlit/ParticleRenderUnlit"
                 // sample the texture
                 fixed4 col = tex2D(_MainTex, i.uv);
                 BoidData boidData = _BoidDataBuffer[i.InstanceId]; 
-                col.xyz *= boidData.color1.xyz;
+                col.xyz *= boidData.color1.xyz * 1.2;
                 col.a = max(0.0, col.a - 0.5) * 2;
                 // col.a = 1.0;
                 // apply fog
