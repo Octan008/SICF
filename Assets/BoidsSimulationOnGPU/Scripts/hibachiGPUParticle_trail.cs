@@ -7,7 +7,7 @@ using UnityEditor;
 
 namespace BoidsSimulationOnGPU
 {
-    public class hibachiGPUParticle : MonoBehaviour
+    public class hibachiGPUParticle_trail : MonoBehaviour
     {
         // Boidデータの構造体
         [System.Serializable]
@@ -29,15 +29,26 @@ namespace BoidsSimulationOnGPU
             public float indivGravityWight;
             public float indivBoidsPileWight;
         }
+
+        public struct Trail
+        {
+            public int currentNodeIdx;
+        }
+
+        public struct Node
+        {
+            public float time;
+            public Vector3 pos;
+        }
+
+        public struct Input
+        {
+            public Vector3 pos;
+        }
         // スレッドグループのスレッドのサイズ
         const int SIMULATION_BLOCK_SIZE = 256;
 
         public hibachiOperationBase operationBase;
-
-
-        public hibachiGPUTrails trails;
-        public hibachiGPUTrailParticles trailParticles;
-        // public hibachiGPUTrailsRenderer trailsRender;
 
         #region Boids Parameters
         // 最大オブジェクト数
@@ -89,15 +100,12 @@ namespace BoidsSimulationOnGPU
         // Boidsシミュレーションを行うComputeShaderの参照
         public ComputeShader BoidsCS;
         #endregion
-        public ComputeBuffer boidDataBuffer;
-        ComputeBuffer _boidForceBuffer;
-
 
         #region Private Resources
         // Boidの操舵力（Force）を格納したバッファ
-        
+        ComputeBuffer _boidForceBuffer;
         // Boidの基本データ（速度, 位置, Transformなど）を格納したバッファ
-        // ComputeBuffer boidDataBuffer;
+        ComputeBuffer _boidDataBuffer;
         #endregion
 
         public Vector2 compute_centered_uv(int width, float u, float v){
@@ -112,7 +120,7 @@ namespace BoidsSimulationOnGPU
         // Boidの基本データを格納したバッファを取得
         public ComputeBuffer GetBoidDataBuffer()
         {
-            return this.boidDataBuffer != null ? this.boidDataBuffer : null;
+            return this._boidDataBuffer != null ? this._boidDataBuffer : null;
         }
 
         // オブジェクト数を取得
@@ -151,8 +159,6 @@ namespace BoidsSimulationOnGPU
         {
             // シミュレーション
             Simulation();
-            trails.LateUpdate_Trails();
-            // trailParticles.Update_TrailParticles();
         }
 
         void OnDestroy()
@@ -205,7 +211,7 @@ namespace BoidsSimulationOnGPU
         void InitBuffer()
         {
             // バッファを初期化
-            boidDataBuffer = new ComputeBuffer(MaxObjectNum,
+            _boidDataBuffer = new ComputeBuffer(MaxObjectNum,
                 Marshal.SizeOf(typeof(BoidData)));
             _boidForceBuffer = new ComputeBuffer(MaxObjectNum,
                 Marshal.SizeOf(typeof(Vector3)));
@@ -249,7 +255,7 @@ namespace BoidsSimulationOnGPU
                 
             }
             _boidForceBuffer.SetData(forceArr);
-            boidDataBuffer.SetData(boidDataArr);
+            _boidDataBuffer.SetData(boidDataArr);
             forceArr = null;
             boidDataArr = null;
         }
@@ -282,7 +288,7 @@ namespace BoidsSimulationOnGPU
             cs.SetVector("_scaleOffset3", new Vector4(1.77f*DisplayScale, DisplayScale,0,0));
             cs.SetFloat("_AvoidWallWeight", AvoidWallWeight);
             cs.SetFloat("_CurlNoiseWeight", 2);
-            cs.SetBuffer(id, "_BoidDataBufferRead", boidDataBuffer);
+            cs.SetBuffer(id, "_BoidDataBufferRead", _boidDataBuffer);
             cs.SetBuffer(id, "_BoidForceBufferWrite", _boidForceBuffer);
             cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
 
@@ -303,7 +309,7 @@ namespace BoidsSimulationOnGPU
             cs.SetFloat("_boidPileWeight", _boidPileWeight);
 
             cs.SetBuffer(id, "_BoidForceBufferRead", _boidForceBuffer);
-            cs.SetBuffer(id, "_BoidDataBufferWrite", boidDataBuffer);
+            cs.SetBuffer(id, "_BoidDataBufferWrite", _boidDataBuffer);
             cs.SetTexture(id, "_tex0", operationBase.texC);
             cs.SetTexture(id, "_tex2", operationBase.texA);
             cs.SetTexture(id, "_tex1", operationBase.texA);
@@ -313,16 +319,16 @@ namespace BoidsSimulationOnGPU
         // バッファを解放
         void ReleaseBuffer()
         {
-            if (boidDataBuffer != null)
+            if (_boidDataBuffer != null)
             {
-                boidDataBuffer.Release();
-                boidDataBuffer = null;
+                _boidDataBuffer.Release();
+                _boidDataBuffer = null;
             }
 
-            if (boidDataBuffer != null)
+            if (_boidForceBuffer != null)
             {
-                boidDataBuffer.Release();
-                boidDataBuffer = null;
+                _boidForceBuffer.Release();
+                _boidForceBuffer = null;
             }
         }
         #endregion

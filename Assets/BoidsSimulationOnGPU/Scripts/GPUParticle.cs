@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
+
 namespace BoidsSimulationOnGPU
 {
     public class GPUParticle : MonoBehaviour
@@ -67,20 +68,23 @@ namespace BoidsSimulationOnGPU
         #region Built-in Resources
         // Boidsシミュレーションを行うComputeShaderの参照
         public ComputeShader BoidsCS;
+        
         #endregion
 
-        #region Private Resources
+        public ComputeBuffer boidDataBuffer;
+
+        // #region Private Resources
         // Boidの操舵力（Force）を格納したバッファ
         // ComputeBuffer _boidForceBuffer;
         // Boidの基本データ（速度, 位置, Transformなど）を格納したバッファ
-        ComputeBuffer _boidDataBuffer;
-        #endregion
+        // public ComputeBuffer boidDataBuffer;
+        // #endregion
 
         #region Accessors
         // Boidの基本データを格納したバッファを取得
         public ComputeBuffer GetBoidDataBuffer()
         {
-            return this._boidDataBuffer != null ? this._boidDataBuffer : null;
+            return this.boidDataBuffer != null ? this.boidDataBuffer : null;
         }
 
         // オブジェクト数を取得
@@ -134,7 +138,7 @@ namespace BoidsSimulationOnGPU
         void InitBuffer()
         {
             // バッファを初期化
-            _boidDataBuffer = new ComputeBuffer(MaxObjectNum,
+            boidDataBuffer = new ComputeBuffer(MaxObjectNum,
                 Marshal.SizeOf(typeof(BoidData)));
             // _boidForceBuffer = new ComputeBuffer(MaxObjectNum,
             //     Marshal.SizeOf(typeof(Vector3)));
@@ -158,7 +162,7 @@ namespace BoidsSimulationOnGPU
                 
             }
             // _boidForceBuffer.SetData(forceArr);
-            _boidDataBuffer.SetData(boidDataArr);
+            boidDataBuffer.SetData(boidDataArr);
             // forceArr = null;
             boidDataArr = null;
         }
@@ -191,7 +195,7 @@ namespace BoidsSimulationOnGPU
             cs.SetVector("_scaleOffset3", new Vector4(1.77f*DisplayScale, DisplayScale,0,0));
             cs.SetFloat("_AvoidWallWeight", AvoidWallWeight);
             cs.SetFloat("_CurlNoiseWeight", 2);
-            cs.SetBuffer(id, "_BoidDataBufferRead", _boidDataBuffer);
+            cs.SetBuffer(id, "boidDataBufferRead", boidDataBuffer);
             // cs.SetBuffer(id, "_BoidForceBufferWrite", _boidForceBuffer);
             // cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
 
@@ -202,7 +206,7 @@ namespace BoidsSimulationOnGPU
             cs.SetFloat("_Circle", operationBase._CirclePhase);
             cs.SetFloat("_textTargetWeight", operationBase._textTargetPhase);
             // cs.SetBuffer(id, "_BoidForceBufferRead", _boidForceBuffer);
-            cs.SetBuffer(id, "_BoidDataBufferWrite", _boidDataBuffer);
+            cs.SetBuffer(id, "boidDataBufferWrite", boidDataBuffer);
             cs.SetTexture(id, "_tex0", operationBase.texC);
             cs.SetTexture(id, "_tex2", operationBase.texB);
             cs.SetTexture(id, "_tex1", operationBase.texA);
@@ -212,10 +216,10 @@ namespace BoidsSimulationOnGPU
         // バッファを解放
         void ReleaseBuffer()
         {
-            if (_boidDataBuffer != null)
+            if (boidDataBuffer != null)
             {
-                _boidDataBuffer.Release();
-                _boidDataBuffer = null;
+                boidDataBuffer.Release();
+                boidDataBuffer = null;
             }
 
             // if (_boidForceBuffer != null)

@@ -2155,19 +2155,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   operationBase: {fileID: 77239755}
-  MaxObjectNum: 20000
+  trails: {fileID: 861175547}
+  trailParticles: {fileID: 861175546}
+  MaxObjectNum: 30000
   CohesionNeighborhoodRadius: 0
   AlignmentNeighborhoodRadius: 0
   SeparateNeighborhoodRadius: 0.5
-  tmp_ply_num: 1524
+  tmp_ply_num: 422
   MaxSpeed: 100
   MaxSteerForce: 10
   CohesionWeight: 0
   AlignmentWeight: 0
   SeparateWeight: 10
   AvoidWallWeight: 100
-  DisplayScale: 1
-  WallCenter: {x: 0, y: 0, z: -7.91}
+  DisplayScale: 1.5
+  WallCenter: {x: 0, y: 0, z: 0}
   WallSize: {x: 24, y: 16.8, z: 19.4}
   _targetWeight: 3
   _turbulanceWeight: 10
@@ -2187,10 +2189,103 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36c78d6347acf4f1b986f72f00a4a570, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ObjectScale: {x: 1, y: 1, z: 1}
+  ObjectScale: {x: 0.2, y: 0.2, z: 0.2}
   GPUBoidsScript: {fileID: 689839972}
   InstanceMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   InstanceRenderMaterial: {fileID: 2100000, guid: 25080fcc9ffad48af8985bb1d384d787, type: 2}
+--- !u!1001 &720504732
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 8497036693557634714, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: life
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634714, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: trailNum
+      value: 100000
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634714, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: hibachiParticleBase
+      value: 
+      objectReference: {fileID: 689839972}
+    - target: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: timeScale
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: initRadius
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: noiseScale
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: positionScale
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: hibachiParticleBase
+      value: 
+      objectReference: {fileID: 689839972}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_RootOrder
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12.000944
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -13.607202
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 9.640006
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634790, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634791, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_Name
+      value: hibachiGPUTrails
+      objectReference: {fileID: 0}
+    - target: {fileID: 8497036693557634791, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
 --- !u!1 &731451542
 GameObject:
   m_ObjectHideFlags: 0
@@ -2586,6 +2681,28 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   priority: 0
+--- !u!114 &861175546 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8497036693557634715, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+  m_PrefabInstance: {fileID: 720504732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 96526997aa835c242bc000e813a71392, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &861175547 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8497036693557634714, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
+  m_PrefabInstance: {fileID: 720504732}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4adf48b67177470449417673a4643850, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &903207297
 GameObject:
   m_ObjectHideFlags: 0
@@ -3506,6 +3623,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   operationBase: {fileID: 77239755}
+  trails: {fileID: 0}
+  trailParticles: {fileID: 0}
   MaxObjectNum: 10000
   CohesionNeighborhoodRadius: 0
   AlignmentNeighborhoodRadius: 0

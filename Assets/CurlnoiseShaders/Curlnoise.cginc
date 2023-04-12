@@ -146,23 +146,23 @@ float3 Constraint(float3 potential, float3 normal, float alpha)
 // パーリンノイズによるベクトル場
 // 3Dとして3要素を計算。
 // それぞれのノイズは明らかに違う（極端に大きなオフセット）を持たせた値とする
-float3 Pnoise(float3 vec, float frequency = 0.3)
+float3 Pnoise(float3 vec, float frequency = 0.3, float time = 0.0)
 {
     // float x = PerlinNoise(vec);
-    float x = ClassicNoise(vec*frequency);
+    float x = ClassicNoise((vec + time)*frequency);
 
     // float y = PerlinNoise(float3(
     float y = ClassicNoise(float3(
-        vec.y + 31.416,
-        vec.z - 47.853,
-        vec.x + 12.793
+        vec.y + 31.416+ time,
+        vec.z - 47.853+ time,
+        vec.x + 12.793+ time
     )*frequency);
 
     // float z = PerlinNoise(float3(
     float z = ClassicNoise(float3(
-        vec.z - 233.145,
-        vec.x - 113.408,
-        vec.y - 185.31
+        vec.z - 233.145+ time,
+        vec.x - 113.408+ time,
+        vec.y - 185.31+ time
     )*frequency);
 
     return float3(x, y, z);
@@ -171,7 +171,7 @@ float3 SamplePotential(float3 pos, float time)
 {
     // float3 s = pos / _NoiseScales[0];
     float3 s = pos / 1;
-    return Pnoise(s);
+    return Pnoise(s, 0.3, time*0.1);
 }
 
 

@@ -273,7 +273,7 @@ void IntegrateCS
 	// force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
 	_targetFade *= b.indivTargetWight;
 	force += (targetForce(b.position, b.target) *10 - b.velocity*5*lw) *_targetFade * _targetWeight;
-	force += CurlNoise(b.position, _DeltaTime) *  _turbulanceFade * _turbulanceWeight;
+	force += CurlNoise(b.position, _Time) *  _turbulanceFade * _turbulanceWeight;
 
 	force += float3(0,-1,0) * _gravityWeight * _gravityFade;
 	force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade);
