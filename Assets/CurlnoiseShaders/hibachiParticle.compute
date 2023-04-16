@@ -249,7 +249,7 @@ void IntegrateCS
 	b.lifeTime += _DeltaTime;
 	if(b.lifeTime > 30){
 		b.lifeTime = -1;
-		b.position = float3(0,8,0) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*5;
+		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
 		b.indivBoidsPileWeight = 1;
@@ -257,6 +257,7 @@ void IntegrateCS
 		b.indivTurblulanceWeight = 0;
 		b.mode = 0;
 	}
+	if(b.lifeTime < 0) b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
 	b.size = max(0, min(1, b.lifeTime));
 	if(b.position.y < -8){
 		b.mode = 1;

@@ -296,7 +296,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 27762351}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3344048e83ce9453cbe84cacf7a56f95, type: 3}
   m_Name: 
@@ -2157,7 +2157,7 @@ MonoBehaviour:
   operationBase: {fileID: 77239755}
   trails: {fileID: 861175547}
   trailParticles: {fileID: 861175546}
-  MaxObjectNum: 100000
+  MaxObjectNum: 10000
   CohesionNeighborhoodRadius: 0
   AlignmentNeighborhoodRadius: 0
   SeparateNeighborhoodRadius: 0.5
@@ -5243,7 +5243,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2114657745}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -8.21, z: 0}
+  m_LocalPosition: {x: 0, y: 8, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
