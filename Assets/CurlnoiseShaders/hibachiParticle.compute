@@ -12,18 +12,20 @@ struct BoidData
 	float3 velocity; // 速度
 	float3 position; // 位置
 	float3 target;   // 目標位置
-	float3 textTarget;
-	float2 uv1;
+	// float3 textTarget;
+	// float2 uv1;
 	float2 uv2;
-	float2 uv3;
+	// float2 uv3;
 	float4 color1;
 	float4 color2;
 	float size;
-	int pagingButton;
-	float indivTargetWight;
-	float indivTurblulanceWight;
-	float indivGravityWight;
-	float indivBoidsPileWight;
+	// int pagingButton;
+	float indivTargetWeight;
+	float indivTurblulanceWeight;
+	float indivGravityWeight;
+	float indivBoidsPileWeight;
+	float lifeTime;
+	int mode;
 };
 
 // スレッドグループのスレッドのサイズ
@@ -228,6 +230,11 @@ void ForceCS
 
 	_BoidForceBufferWrite[P_ID] = force; // 書き込み
 }
+float rand(float2 co) //引数はシード値と呼ばれる　同じ値を渡せば同じものを返す
+{
+    return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
+            
 
 // 速度, 位置計算用カーネル関数
 [numthreads(SIMULATION_BLOCK_SIZE, 1, 1)]
@@ -239,68 +246,84 @@ void IntegrateCS
 	const unsigned int P_ID = DTid.x;          // インデックスを取得
 											           
 	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む
-	float3 force = float3(0.0, 0.0, 0.0);
-	float3 boidforce = _BoidForceBufferRead[P_ID]; // 操舵力を読み込む
+	b.lifeTime += _DeltaTime;
+	if(b.lifeTime > 30){
+		b.lifeTime = -1;
+		b.position = float3(0,8,0) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*5;
+		b.velocity = float3(0,0,0);
+		b.indivTargetWeight = 0;
+		b.indivBoidsPileWeight = 1;
+		b.indivGravityWeight = 1;
+		b.indivTurblulanceWeight = 0;
+		b.mode = 0;
+	}
+	b.size = max(0, min(1, b.lifeTime));
+	if(b.position.y < -8){
+		b.mode = 1;
+	}
+		if(b.mode == 1){
+			b.indivGravityWeight = lerp(b.indivGravityWeight, 0, 0.1);
+			b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 0, 0.1);
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 1, 0.1);
+			if(b.indivTurblulanceWeight > 0.99) b.mode = 2;
+		}
+		if(b.mode == 2){
+			// b.indivTurblulanceWeight
+			b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.005);
+			b.size = b.indivTargetWeight;
+			if(b.indivTargetWeight > 1.99) b.mode = 3;
+		}
+		if(b.mode == 3){
+			b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.01);
+			b.size = max(b.indivTargetWeight, 0.3);
+			if(b.indivTargetWeight < 0.01) b.mode = 4;
+		}
 
-	
-	// b.color1 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv2, 0), 0.9);
-	_scaleOffset2.y *= 4;
-	_scaleOffset2.x *= 0.3;
-	float3 target_text = float3(b.uv2-0.5f, 0) * float3(_scaleOffset2.xy,1);
-	
-	float circlePhase = min(((10*_Circle - length(b.position))/10*_Circle)*10, 1);//内側が1
-	// circlePhase = max(circlePhase, 0);
-	// if(_Circle > 0.99) circlePhase = 1;
-	circlePhase=1;
-	b.size = circlePhase;
-	float targetPhase = 0;
-	float3 target = lerp(b.target, target_text, max(_targetFade, circlePhase));
+		
 
-	circlePhase = max(0, circlePhase - _targetFade);
-	float tmp_t = 0.5;
-	float activatorphase = max(0.0, (tmp_t-length(b.position.xz-_activator.xz))/tmp_t);
-	activatorphase = 1;
-	b.indivTargetWight =  max(0.0,lerp(b.indivTargetWight, 1, activatorphase*_targetFade));
-	// b.indivTargetWight = 0.0;
+	if(b.lifeTime >0.0){
+		float3 force = float3(0.0, 0.0, 0.0);
+		float3 boidforce = _BoidForceBufferRead[P_ID]; // 操舵力を読み込む
 
-	
-	
-	// // 壁に近づいたら反発する力を与える
-	force += avoidWall(b.position) * _AvoidWallWeight; 
-	
-	// force += CurlNoise(b.position, _DeltaTime) *  circlePhase * _CurlNoiseWeight;
-	float lw = min(2.0, 1.0/max(0.0001, length(b.position-target)));
-	// force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
-	_targetFade *= b.indivTargetWight;
-	force += (targetForce(b.position, b.target) *10 - b.velocity*5*lw) *_targetFade * _targetWeight;
-	force += CurlNoise(b.position, _Time) *  _turbulanceFade * _turbulanceWeight;
+		// b.color1 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv2, 0), 0.9);
+		_scaleOffset2.y *= 4;
+		_scaleOffset2.x *= 0.3;
+		// float3 target_text = float3(b.uv2-0.5f, 0) * float3(_scaleOffset2.xy,1);
+		
+		float circlePhase = min(((10*_Circle - length(b.position))/10*_Circle)*10, 1);//内側が1
+		circlePhase=1;
+		// b.size = circlePhase;
+		float targetPhase = 0;
+		// float3 target = lerp(b.target, target_text, max(_targetFade, circlePhase));
 
-	force += float3(0,-1,0) * _gravityWeight * _gravityFade;
-	force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade);
+		circlePhase = max(0, circlePhase - _targetFade);
+		float tmp_t = 0.5;
+		float activatorphase = max(0.0, (tmp_t-length(b.position.xz-_activator.xz))/tmp_t);
+		activatorphase = 1;
+		// b.indivTargetWeight =  max(0.0,lerp(b.indivTargetWeight, 1, activatorphase*_targetFade));
+		// b.indivTargetWeight = 0.0;
+		
+		// // 壁に近づいたら反発する力を与える
+		force += avoidWall(b.position) * _AvoidWallWeight; 
+		float lw = min(2.0, 1.0/max(0.0001, length(b.position-b.target)));
+		// force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
+		_targetFade *= b.indivTargetWeight;
 
+		force += (targetForce(b.position, b.target) *10 - b.velocity*5*lw) * _targetFade * _targetWeight * min(1, b.indivTargetWeight);
+		force += CurlNoise(b.position, _Time) *  _turbulanceFade * _turbulanceWeight * b.indivTurblulanceWeight;
+		force += float3(0,-1,0) * _gravityWeight * _gravityFade * b.indivGravityWeight;
+		force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade) * b.indivBoidsPileWeight;
 
-	// float4 tmp_color1 = lerp(b.color1, _tex0.SampleLevel(linearClampSampler, b.uv1, 0), 0.9);
-	float4 tmp_color1 = float4(0.5,0.5,0.5,1);
-	float4 tmp_color2 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv2, 0), 0.9);
-
-	float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
-	float4 tmp_color3 = _tex0.SampleLevel(linearClampSampler, location_uv, 0);
-	// tmp_color2 = lerp(tmp_color2, tmp_color3, min(1-_targetFade, circlePhase));
-	b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position-b.target)), _targetFade));
-	// b.color1 = lerp(b.color1, tmp_color3, );
-	force = limit(force, _MaxSteerForce);           // 操舵力を制限
-	b.velocity *= 0.95;
-	b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
-	// b.velocity = lerp(b.velocity+force * _DeltaTime, 300*targetForce(b.position, target)* _DeltaTime, _targetFade);
-	b.velocity = limit(b.velocity, _MaxSpeed); // 速度を制限
-	b.position += b.velocity * _DeltaTime;     // 位置を更新
-
-	
-
-
-
-	// b.color1 = float3(b.uv1.x,b.uv1.y ,0);
-	// b.color1 = float3(1,0,0);
-											           
+		float4 tmp_color1 = float4(0.5,0.5,0.5,1);
+		float4 tmp_color2 = lerp(b.color2, _tex2.SampleLevel(linearClampSampler, b.uv2, 0), 0.9);
+		float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
+		float4 tmp_color3 = _tex0.SampleLevel(linearClampSampler, location_uv, 0);
+		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position-b.target)), _targetFade));
+		force = limit(force, _MaxSteerForce);           // 操舵力を制限
+		b.velocity *= 0.95;
+		b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
+		b.velocity = limit(b.velocity, _MaxSpeed); // 速度を制限
+		b.position += b.velocity * _DeltaTime;     // 位置を更新			           
+	}
 	_BoidDataBufferWrite[P_ID] = b;            // 計算結果を書き込む
 }

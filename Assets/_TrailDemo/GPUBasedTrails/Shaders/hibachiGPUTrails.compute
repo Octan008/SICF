@@ -27,18 +27,20 @@ struct BoidData
 	float3 velocity; // 速度
 	float3 position; // 位置
 	float3 target;   // 目標位置
-	float3 textTarget;
-	float2 uv1;
+	// float3 textTarget;
+	// float2 uv1;
 	float2 uv2;
-	float2 uv3;
+	// float2 uv3;
 	float4 color1;
 	float4 color2;
 	float size;
-	int pagingButton;
+	// int pagingButton;
 	float indivTargetWight;
 	float indivTurblulanceWight;
 	float indivGravityWight;
 	float indivBoidsPileWight;
+	float lifeTime;
+	int mode;
 };
 StructuredBuffer<BoidData> _InputBuffer;
 
@@ -65,6 +67,10 @@ void CalcInput (uint3 id : SV_DispatchThreadID)
 		{
 			Node node;
 			node.time = _Time;
+			if(_InputBuffer[trailIdx].lifeTime < 0 || _InputBuffer[trailIdx].mode == 0){
+				node.time = -1;
+			}
+			// node.time = _InputBuffer[trailIdx].lifeTime;
 			node.position = position;
 
 			currentNodeIdx++;

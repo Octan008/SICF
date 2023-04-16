@@ -39,18 +39,20 @@ Shader "Unlit/ParticleRenderUnlit"
                 float3 velocity; // 速度
                 float3 position; // 位置
                 float3 target; // 目標位置
-                float3 textTarget;
-                float2 uv1;
+                // float3 textTarget;
+                // float2 uv1;
                 float2 uv2;
-                float2 uv3;
+                // float2 uv3;
                 float4 color1;
                 float4 color2;
                 float size;
-                int pagingButton;
+                // int pagingButton;
                 float indivTargetWight;
                 float indivTurblulanceWight;
                 float indivGravityWight;
                 float indivBoidsPileWight;
+                float lifeTime;
+                int mode;
             };
 
             // #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED

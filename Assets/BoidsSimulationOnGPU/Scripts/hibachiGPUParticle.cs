@@ -16,18 +16,20 @@ namespace BoidsSimulationOnGPU
             public Vector3 Velocity; // 速度
             public Vector3 Position; // 位置
             public Vector3 targetPosition; // 目標位置
-            public Vector3 textTarget;
-            public Vector2 UV1;
+            // public Vector3 textTarget;
+            // public Vector2 UV1;
             public Vector2 UV2;
-            public Vector2 UV3;
+            // public Vector2 UV3;
             public Vector4 Color1;
             public Vector4 Color2;
             public float Size;
-            public int pagingButton;
+            // public int pagingButton;
             public float indivTargetWight;
             public float indivTurbulanceWight;
             public float indivGravityWight;
             public float indivBoidsPileWight;
+            public float lifeTime;
+            public int mode;
         }
         // スレッドグループのスレッドのサイズ
         const int SIMULATION_BLOCK_SIZE = 256;
@@ -41,7 +43,7 @@ namespace BoidsSimulationOnGPU
 
         #region Boids Parameters
         // 最大オブジェクト数
-        [Range(10000, 100000)]
+        [Range(10000, 200000)]
         public int MaxObjectNum = 16384;
 
         // 結合を適用する他の個体との半径
@@ -151,7 +153,7 @@ namespace BoidsSimulationOnGPU
         {
             // シミュレーション
             Simulation();
-            trails.LateUpdate_Trails();
+            // trails.LateUpdate_Trails();
             // trailParticles.Update_TrailParticles();
         }
 
@@ -222,7 +224,7 @@ namespace BoidsSimulationOnGPU
                 forceArr[i] = Vector3.zero;
                 // boidDataArr[i].Position = Random.insideUnitSphere * 1.0f;
                 // boidDataArr[i].UV1 = new Vector2(Random.value, Random.value);
-                boidDataArr[i].UV1 = compute_centered_uv((int)(tmp_ply_num-1)+1, Random.value, Random.value);
+                // boidDataArr[i].UV1 = compute_centered_uv((int)(tmp_ply_num-1)+1, Random.value, Random.value);
                 // boidDataArr[i].Color1 = operationBase.texA.GetPixel(Mathf.CeilToInt(422*Random.value), Mathf.CeilToInt(422*Random.value));
                 // int u = i/422;
                 int u = Mathf.CeilToInt((tmp_ply_num-1)*Random.value);
@@ -233,8 +235,10 @@ namespace BoidsSimulationOnGPU
                 boidDataArr[i].UV2 = new Vector2((float)u/(tmp_ply_num-1),(float)v/(tmp_ply_num-1));
                 // boidDataArr[i].Position = Vector3.Scale(new Vector3(boidDataArr[i].UV1.x-0.5f, boidDataArr[i].UV1.y-0.5f, 0) , tmp_pos_scl);
                 Vector4 a = (Vector4)texB[u,v];
-                // boidDataArr[i].Position = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , new Vector3(1.0f, 1.0f, 1.0f));
-                boidDataArr[i].Position = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , tmp_pos_scl);
+                // boidDataArr[i].Position = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , tmp_pos_scl);
+                Vector2 tmp =Random.insideUnitCircle;
+                boidDataArr[i].Position = new Vector3(tmp.x* 5, 8, tmp.y* 5) ;
+                boidDataArr[i].lifeTime = -Random.value*30;
                 // boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(Random.value-0.5f, Random.value-0.5f, 0) , tmp_pos_scl);
                 // boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , new Vector3(1.0f, 1.0f, 1.0f));
                 boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , tmp_pos_scl);
@@ -242,8 +246,9 @@ namespace BoidsSimulationOnGPU
                 // // boidDataArr[i].Velocity = Random.insideUnitSphere * 0.1f;
                 boidDataArr[i].Velocity = Vector3.zero;
                 boidDataArr[i].Size = 1;
+                
                 boidDataArr[i].indivTargetWight = 0.0f;
-                boidDataArr[i].indivTurbulanceWight = 1.0f;
+                boidDataArr[i].indivTurbulanceWight = 0.0f;
                 boidDataArr[i].indivGravityWight = 1.0f;
                 boidDataArr[i].indivBoidsPileWight = 1.0f;
                 

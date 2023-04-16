@@ -11,8 +11,8 @@ public class hibachiOperationBase : MonoBehaviour
    public BoidsSimulationOnGPU.GPUParticle GPUParticleScript;
    public float _CirclePhase = 1.0f;
 
-   public float _targetFade = 0.0f;
-   public float _turbulanceFade = 0.0f;
+   public float _targetFade = 1.0f;
+   public float _turbulanceFade = 1.0f;
    public float _gravityFade = 1.0f;
    public float _boidPileFade = 1.0f;
 

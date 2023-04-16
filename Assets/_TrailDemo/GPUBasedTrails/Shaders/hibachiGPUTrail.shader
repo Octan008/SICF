@@ -4,12 +4,15 @@ Properties {
 	_Width("Width", Float) = 0.1
 	_StartColor("StartColor", Color) = (1,1,1,1)
 	_EndColor("EndColor", Color) = (0,0,0,1)
+	_MainTex("MainTex", 2D) = "white" {}
 }
    
 SubShader {
 Pass{
 	Cull Off Fog { Mode Off } ZWrite Off 
 	Blend One One
+	Tags { "RenderType"="Transparent" "Queue" = "Transparent" }
+	//  Blend SrcAlpha OneMinusSrcAlpha 
 
 	CGPROGRAM
 	#pragma target 5.0
@@ -24,6 +27,7 @@ Pass{
 	float _Life;
 	float4 _StartColor;
 	float4 _EndColor;
+	sampler2D _MainTex;
 	StructuredBuffer<Trail> _TrailBuffer;
 	StructuredBuffer<Node> _NodeBuffer;
 
@@ -44,6 +48,7 @@ Pass{
 	struct gs_out {
 		float4 pos : SV_POSITION;
 		float4 col : COLOR;
+		// float2 uv : TEXCOORD0;
 	};
 
 	vs_out vert (uint id : SV_VertexID, uint instanceId : SV_InstanceID)
@@ -102,8 +107,10 @@ Pass{
 
 		output0.pos = UnityWorldToClipPos(pos + (sideDir * width));
 		output1.pos = UnityWorldToClipPos(pos - (sideDir * width));
+		
 		output2.pos = UnityWorldToClipPos(posNext + (sideDirNext * width));
 		output3.pos = UnityWorldToClipPos(posNext - (sideDirNext * width));
+		
 
 		output0.col =
 		output1.col = input[0].col;
@@ -120,6 +127,8 @@ Pass{
 
 	fixed4 frag (gs_out In) : COLOR
 	{
+		fixed4 col = tex2D(_MainTex, In.pos.xy*0.1);
+		In.col.w = 0.1;
 		return In.col;
 	}
 

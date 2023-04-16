@@ -544,8 +544,8 @@ MonoBehaviour:
   camMat: {fileID: 0}
   GPUParticleScript: {fileID: 0}
   _CirclePhase: 1
-  _targetFade: 0
-  _turbulanceFade: 0
+  _targetFade: 1
+  _turbulanceFade: 1
   _gravityFade: 1
   _boidPileFade: 1
   texA: {fileID: -2231058418007342408, guid: 0b5ed5525bbb9412aa07c08dd295c41f, type: 3}
@@ -2157,7 +2157,7 @@ MonoBehaviour:
   operationBase: {fileID: 77239755}
   trails: {fileID: 861175547}
   trailParticles: {fileID: 861175546}
-  MaxObjectNum: 30000
+  MaxObjectNum: 100000
   CohesionNeighborhoodRadius: 0
   AlignmentNeighborhoodRadius: 0
   SeparateNeighborhoodRadius: 0.5
@@ -2189,7 +2189,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36c78d6347acf4f1b986f72f00a4a570, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ObjectScale: {x: 0.2, y: 0.2, z: 0.2}
+  ObjectScale: {x: 0.5, y: 0.5, z: 0.5}
   GPUBoidsScript: {fileID: 689839972}
   InstanceMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   InstanceRenderMaterial: {fileID: 2100000, guid: 25080fcc9ffad48af8985bb1d384d787, type: 2}
@@ -2282,7 +2282,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8497036693557634791, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 67891dc5e5cabc645b80ccf874d12b02, type: 3}
