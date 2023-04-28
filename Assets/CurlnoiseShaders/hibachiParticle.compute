@@ -1,0 +1,504 @@
+﻿// カーネル関数を指定
+#pragma kernel ForceCS      // 操舵力を計算
+#pragma kernel IntegrateCS  // 速度, 位置を計算
+
+#include "SimplexNoise.cginc"
+#include "NoiseMath.cginc"
+#include "Curlnoise.cginc"
+
+// Boidデータの構造体
+struct BoidData
+{
+	float3 velocity; // 速度
+	float3 position; // 位置
+	float3 target;   // 目標位置
+	// float3 textTarget;
+	// float2 uv1;
+	float2 uv2;
+	// float2 uv3;
+	float4 color1;
+	float4 color2;
+	float size;
+	// int pagingButton;
+	float indivTargetWeight;
+	float indivTurblulanceWeight;
+	float indivGravityWeight;
+	float indivBoidsPileWeight;
+	float lifeTime;
+	int mode;
+	int animFrame;
+	float4 extras;
+};
+
+// スレッドグループのスレッドのサイズ
+#define SIMULATION_BLOCK_SIZE 256
+
+// Boidデータのバッファ（読み取り用）
+StructuredBuffer<BoidData>   _BoidDataBufferRead;
+// Boidデータのバッファ（読み取り, 書き込み用）
+RWStructuredBuffer<BoidData> _BoidDataBufferWrite;
+// Boidの操舵力のバッファ（読み取り用）
+StructuredBuffer<float3>     _BoidForceBufferRead;
+// Boidの操舵力のバッファ（読み取り, 書き込み用）
+RWStructuredBuffer<float3>   _BoidForceBufferWrite;
+
+int _MaxBoidObjectNum; // Boidオブジェクト数
+
+float _DeltaTime;      // 前フレームから経過した時間
+float _Time;
+float _Circle;
+
+float _SeparateNeighborhoodRadius;  // 分離を適用する他の個体との距離
+float _AlignmentNeighborhoodRadius; // 整列を適用する他の個体との距離
+float _CohesionNeighborhoodRadius;  // 結合を適用する他の個体との距離
+
+float _MaxSpeed;        // 速度の最大値
+float _MaxSteerForce;   // 操舵する力の最大値
+
+float _SeparateWeight;  // 分離適用時の重み
+float _AlignmentWeight; // 整列適用時の重み
+float _CohesionWeight;  // 結合適用時の重み
+
+float4 _WallCenter;      // 壁の中心座標
+float4 _WallSize;        // 壁のサイズ
+float  _AvoidWallWeight; // 壁を避ける強さの重み
+
+float _targetWeight;    // 目標地点に向かう強さの重み
+float _turbulanceWeight;// テクスチャの目標地点に向かう強さの重み
+float _gravityWeight;// テクスチャの目標地点に向かう強さの重み
+float _boidPileWeight;// テクスチャの目標地点に向かう強さの重み
+
+float _targetFade;// テクスチャの目標地点に向かう強さの重み
+float _turbulanceFade;// テクスチャの目標地点に向かう強さの重み
+float _gravityFade;// テクスチャの目標地点に向かう強さの重み
+float _boidPileFade;// テクスチャの目標地点に向かう強さの重み
+
+float3 _activator;
+
+
+float4 _scaleOffset1;
+float4 _scaleOffset2;
+float4 _scaleOffset3;
+
+int _emitParticles;
+int _startingScene;
+int _endingScene;
+float _particleLifeTime;
+float3 _position_offset, _anker_offset, _rotation_offset;
+
+float _CurlNoiseWeight; // ノイズによる操舵力の重み
+
+Texture2D<float4> _tex0, _tex1, _tex2;
+Texture2D<float4> _posTex0, _posTex1, _posTex2, _posTex3, _posTex4;
+Texture2D<float4> _colTex0, _colTex1, _colTex2, _colTex3, _colTex4;
+float3 _posOffset0, _posOffset1, _posOffset2, _posOffset3, _posOffset4;
+float3 _rotOffset0, _rotOffset1, _rotOffset2, _rotOffset3, _rotOffset4;
+float3 _ankerOffset0, _ankerOffset1, _ankerOffset2, _ankerOffset3, _ankerOffset4;
+// SamplerState sampler_point_clamp;
+SamplerState sampler_point_clamp;
+
+
+// ベクトルの大きさを制限する
+float3 limit(float3 vec, float max)
+{
+	float length = sqrt(dot(vec, vec)); // 大きさ
+	return (length > max && length > 0) ? vec.xyz * (max / length) : vec.xyz;
+}
+
+// 壁に当たった時に逆向きの力を返す
+float3 avoidWall(float3 position)
+{
+	float3 wc = _WallCenter.xyz;
+	float3 ws = _WallSize.xyz;
+	float3 acc = float3(0, 0, 0);
+	// x
+	acc.x = (position.x < wc.x - ws.x * 0.5) ? acc.x + 1.0 : acc.x;
+	acc.x = (position.x > wc.x + ws.x * 0.5) ? acc.x - 1.0 : acc.x;
+	
+	// y
+	acc.y = (position.y < wc.y - ws.y * 0.5) ? acc.y + 1.0 : acc.y;
+	acc.y = (position.y > wc.y + ws.y * 0.5) ? acc.y - 1.0 : acc.y;
+	
+	// z
+	acc.z = (position.z < wc.z - ws.z * 0.5) ? acc.z + 1.0 : acc.z;
+	acc.z = (position.z > wc.z + ws.z * 0.5) ? acc.z - 1.0 : acc.z;
+
+	return acc;
+}
+
+float3 targetForce(float3 position, float3 target)
+{
+	float3 force = target - position;
+	return force;
+}
+
+// シェアードメモリ Boidデータ格納用
+groupshared BoidData boid_data[SIMULATION_BLOCK_SIZE];
+
+// 操舵力の計算用カーネル関数
+[numthreads(SIMULATION_BLOCK_SIZE, 1, 1)]
+void ForceCS
+(
+	uint3 DTid : SV_DispatchThreadID, // スレッド全体で固有のID
+	uint3 Gid : SV_GroupID,           // グループのID
+	uint3 GTid : SV_GroupThreadID,    // グループ内のスレッドID
+	uint  GI : SV_GroupIndex          // SV_GroupThreadIDを一次元にしたもの 0-255
+)
+{
+	const unsigned int P_ID = DTid.x; // 自身のID
+	float3 P_position = _BoidDataBufferRead[P_ID].position; // 自身の位置
+	float3 P_velocity = _BoidDataBufferRead[P_ID].velocity; // 自身の速度
+
+	float3 force = float3(0, 0, 0); // 操舵力を初期化
+
+	float3 sepPosSum = float3(0, 0, 0); // 分離計算用 位置加算変数
+	int sepCount = 0; // 分離のために計算した他の個体の数のカウント用変数
+
+	float3 aliVelSum = float3(0, 0, 0); // 整列計算用 速度加算変数
+	int aliCount = 0; // 整列のために計算した他の個体の数のカウント用変数
+
+	float3 cohPosSum = float3(0, 0, 0); // 結合計算用 位置加算変数
+	int cohCount = 0; // 結合のために計算した他の個体の数のカウント用変数
+
+	// SIMULATION_BLOCK_SIZE（グループスレッド数）ごとの実行 (グループ数分実行)
+	[loop]
+	for (uint N_block_ID = 0; N_block_ID < (uint)_MaxBoidObjectNum;
+		N_block_ID += SIMULATION_BLOCK_SIZE)
+	{
+		// SIMULATION_BLOCK_SIZE分のBoidデータを、シェアードメモリに格納
+		boid_data[GI] = _BoidDataBufferRead[N_block_ID + GI];
+
+		// すべてのグループ共有アクセスが完了し、
+		// グループ内のすべてのスレッドがこの呼び出しに到達するまで、
+		// グループ内のすべてのスレッドの実行をブロックする
+		GroupMemoryBarrierWithGroupSync();
+
+		// 他の個体との計算
+		for (int N_tile_ID = 0; N_tile_ID < SIMULATION_BLOCK_SIZE; N_tile_ID++)
+		{
+			float3 N_position = boid_data[N_tile_ID].position; // 他の個体の位置
+float3 N_velocity = boid_data[N_tile_ID].velocity; // 他の個体の速度
+
+float3 diff = P_position - N_position; // 自身と他の個体の位置の差
+float  dist = sqrt(dot(diff, diff));   // 自身と他の個体の位置の距離
+
+// --- 分離（Separation） ---
+if (dist > 0.0 && dist <= _SeparateNeighborhoodRadius)
+{
+	// 他の個体の位置から自身へ向かうベクトル
+	float3 repulse = normalize(P_position - N_position);
+	// 自身と他の個体の位置の距離で割る（距離が遠ければ影響を小さく）
+	repulse /= dist;
+	sepPosSum += repulse; // 加算
+	sepCount++;           // 個体数カウント
+}
+
+// --- 整列（Alignment） ---
+if (dist > 0.0 && dist <= _AlignmentNeighborhoodRadius)
+{
+	aliVelSum += N_velocity; // 加算
+	aliCount++;              // 個体数カウント
+}
+
+// --- 結合（Cohesion） ---
+if (dist > 0.0 && dist <= _CohesionNeighborhoodRadius)
+{
+	cohPosSum += N_position; // 加算
+	cohCount++;              // 個体数カウント 
+}
+		}
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	// 操舵力（分離）
+	float3 sepSteer = (float3)0.0;
+	if (sepCount > 0)
+	{
+		sepSteer = sepPosSum / (float)sepCount;     // 平均を求める
+		sepSteer = normalize(sepSteer) * _MaxSpeed; // 最大速度に調整
+		sepSteer = sepSteer - P_velocity;           // 操舵力を計算
+		sepSteer = limit(sepSteer, _MaxSteerForce); // 操舵力を制限
+	}
+
+	// 操舵力（整列）
+	float3 aliSteer = (float3)0.0;
+	if (aliCount > 0)
+	{
+		aliSteer = aliVelSum / (float)aliCount;     // 近い個体の速度の平均を求める
+		aliSteer = normalize(aliSteer) * _MaxSpeed; // 最大速度に調整
+		aliSteer = aliSteer - P_velocity;           // 操舵力を計算
+		aliSteer = limit(aliSteer, _MaxSteerForce); // 操舵力を制限
+	}
+	// 操舵力（結合）
+	float3 cohSteer = (float3)0.0;
+	if (cohCount > 0)
+	{
+		cohPosSum = cohPosSum / (float)cohCount;    // 近い個体の位置の平均を求める
+		cohSteer = cohPosSum - P_position;      // 平均位置方向へのベクトルを求める
+		cohSteer = normalize(cohSteer) * _MaxSpeed; // 最大速度に調整
+		cohSteer = cohSteer - P_velocity;           // 操舵力を計算
+		cohSteer = limit(cohSteer, _MaxSteerForce); // 操舵力を制限
+	}
+	force += aliSteer * _AlignmentWeight; // 操舵力に整列する力を加える
+	force += cohSteer * _CohesionWeight;  // 操舵力に結合する力を加える
+	force += sepSteer * _SeparateWeight;  // 操舵力に分離する力を加える
+
+	_BoidForceBufferWrite[P_ID] = force; // 書き込み
+}
+float rand(float2 st, int seed)
+{
+	return frac(sin(dot(st.xy, float2(12.9898, 78.233)) + seed) * 43758.5453123);
+}
+float4x4 eulerAnglesToRotationMatrix(float3 angles)
+{
+	float ch = cos(angles.y); float sh = sin(angles.y); // heading
+	float ca = cos(angles.z); float sa = sin(angles.z); // attitude
+	float cb = cos(angles.x); float sb = sin(angles.x); // bank
+
+	// Ry-Rx-Rz (Yaw Pitch Roll)
+	return float4x4(
+		ch * ca + sh * sb * sa, -ch * sa + sh * sb * ca, sh * cb, 0,
+		cb * sa, cb * ca, -sb, 0,
+		-sh * ca + ch * sb * sa, sh * sa + ch * sb * ca, ch * cb, 0,
+		0, 0, 0, 1
+	);
+}
+float3 eularAngles2radian(float3 angles){
+	return (angles/180) * 3.141592;
+}
+float fmod(float a, float b)
+{
+  int n = (int)(a / b);
+  a -= n * b;
+  if (a < 0)
+  {
+    a += b;
+  }
+  return a;
+}
+// 速度, 位置計算用カーネル関数
+[numthreads(SIMULATION_BLOCK_SIZE, 1, 1)]
+void IntegrateCS
+(
+	uint3 DTid : SV_DispatchThreadID // スレッド全体で固有のID
+)
+{
+	const unsigned int P_ID = DTid.x;          // インデックスを取得
+
+	float height = 0.146;
+	float Floor = -height;
+
+	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む
+	b.lifeTime += _DeltaTime;
+	if(_startingScene){
+		b.lifeTime = -_particleLifeTime*rand(b.uv2, 0)-1;
+		// b.lifeTime -= _particleLifeTime;
+		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
+		b.velocity = float3(0,0,0);
+		b.indivTargetWeight = 0;
+		b.indivBoidsPileWeight = 1;
+		b.indivGravityWeight = 1;
+		b.indivTurblulanceWeight = 0;
+		b.mode = 0;
+	}
+	if(b.lifeTime > _particleLifeTime && _emitParticles == 1){
+		b.lifeTime = -1;
+		// b.lifeTime -= _particleLifeTime;
+		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
+		b.velocity = float3(0,0,0);
+		b.indivTargetWeight = 0;
+		b.indivBoidsPileWeight = 1;
+		b.indivGravityWeight = 1;
+		b.indivTurblulanceWeight = 0;
+		b.mode = 0;
+	}
+	if (b.lifeTime < 0) {
+		b.position = float3(_activator.x, height, _activator.z) + float3(rand(b.position.xy, 0) * 2 - 1, 0, rand(b.position.xz, 0) * 2 - 1) * 0.02;
+		b.velocity *= 0;
+	}
+	b.size = max(0, min(1, b.lifeTime)) * 0.5; 
+	float3 target_fin = b.target;
+	//if (fmod(floor(b.lifeTime / 2) , 3) == 0){
+	//	target_fin = b.target;
+	//}
+	//if (fmod(floor(b.lifeTime / 2), 3) == 1){
+	//	target_fin = b.target + float3(-0.1, 0, 0);
+	//}
+	//if (fmod(floor(b.lifeTime / 2), 3) == 2){
+	//	target_fin = b.target + float3(0.1, 0, 0);
+	//}
+	// b.indivTargetWeight = 1;
+		
+	if(b.position.y < Floor+0.001 && b.mode == 0){
+		b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 10, 0.1);
+		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, 0.1);
+	}
+
+	
+	if(b.position.y < Floor+0.001 && b.mode == 0 && b.lifeTime > 7.0f){
+		b.mode = 1;
+	}
+	float speed_multi = 1;
+	if(b.mode == 1){
+		// b.size = lerp(b.size, 1, 0.000001)*0.5;
+		b.indivGravityWeight = lerp(b.indivGravityWeight, 0, 0.1);
+		b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 0.5, 0.1);
+		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 1, 0.1);
+		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) < 0.98) {
+			b.mode = 2;
+			// b.indivTurblulanceWeight = 0;
+		}
+		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) > 0.8){
+			speed_multi = b.indivTurblulanceWeight;
+		}
+	}
+	float2 new_uv = b.uv2;
+	float turbulanceFading = 0.2;
+	float stopTimeInv = 0.5;
+	float firstTurblulance = 10;
+	float topTimeoffset = 0.2;
+	float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
+	// float sizeFin = b.size;
+	float target_scale = 0.005;
+	
+	if(b.mode == 2 && b.lifeTime > 15.0){
+		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
+		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
+			if(b.animFrame != 0){
+				b.indivTurblulanceWeight = firstTurblulance;
+				b.animFrame = 0;
+			}
+			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset0+_rotation_offset));
+			
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			float4 t2 = _posTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			float4 c2 = _colTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			tmp_color2 = lerp(b.color2, c2, 0.9);
+			// target_fin = b.target;
+			target_fin = t2.xyz*target_scale;
+						
+			target_fin += _posOffset0;
+			target_fin = mul(rotMat, target_fin -_ankerOffset0) +  _ankerOffset0;
+						
+			
+		}
+		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 1)){
+			if(b.animFrame != 1){
+				b.indivTurblulanceWeight = firstTurblulance;
+				b.animFrame = 1;
+			}
+			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset1+_rotation_offset));
+							
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			float4 t2 = _posTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			float4 c2 = _colTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			tmp_color2 = lerp(b.color2, c2, 0.9);
+			// target_fin = b.target;
+			target_fin = t2.xyz*target_scale;
+						
+			target_fin += _posOffset1;
+			target_fin = mul(rotMat, target_fin -_ankerOffset1) +  _ankerOffset1;
+		}
+		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 2)){
+			if(b.animFrame != 2){
+				b.indivTurblulanceWeight = firstTurblulance;
+				b.animFrame = 2;
+			}
+			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset2+_rotation_offset));
+							
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			float4 t2 = _posTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			float4 c2 = _colTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+			tmp_color2 = lerp(b.color2, c2, 0.9);
+			// target_fin = b.target;
+			target_fin = t2.xyz*target_scale;
+						
+			target_fin += _posOffset2;
+			target_fin = mul(rotMat, target_fin -_ankerOffset2) +  _ankerOffset2;
+			
+		}
+		// b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.01);
+		// b.size = 1 + max(1 - b.indivTurblulanceWeight, 0)*0.1;
+		// if(b.indivTurblulanceWeight > 1.99) b.mode = 3;
+		float mulmul = min(max(0.5,1-20*length(b.position- target_fin)), 1);
+		// b.size *= mulmul * mulmul;
+		// b.size = mulmul * mulmul*0.5;
+		// b.size = 0.5;
+		// b.size = lerp(b.size, mulmul * mulmul, 0.5);
+	}
+	//if (b.mode == 3) {
+	//	//b.lifeTime = -1;
+	//}
+	//if(b.mode == 3){
+	//	b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.01);
+	//	b.size = max(b.indivTargetWeight, 0.3) * 0.5;
+	//	if(b.indivTargetWeight < 0.01) b.mode = 4;
+	//}
+	if(_endingScene){
+		b.indivGravityWeight = lerp(b.indivGravityWeight, 1, 0.1);
+		b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 0, 0.1);
+		b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.1);
+		b.indivTurblulanceWeight = lerp(b.indivTurblulanceWeight, 0, 0.1);
+		tmp_color2 = float4(0,1,0,1);
+		_targetFade = 0;
+		_gravityFade = 1;
+		_boidPileFade = 1;
+		_turbulanceFade = 1;
+		// b.lifeTime = -1;
+		b.size = 1;
+		b.mode = 0;
+	}
+
+
+	if(b.position.y < Floor+0.01 && b.mode == 0){
+		b.position.y = lerp(b.position.y, Floor, 0.1);
+		b.velocity.y = lerp(b.velocity, 0, 0.1);
+	}
+
+	if(b.lifeTime >= 0.0 || _endingScene){
+		float3 force = float3(0.0, 0.0, 0.0);
+		float3 boidforce = _BoidForceBufferRead[P_ID]; // 操舵力を読み込む
+
+		// b.color1 = lerp(b.color2, _tex2.SampleLevel(sampler_point_clamp, b.uv2, 0), 0.9);
+		_scaleOffset2.y *= 4;
+		_scaleOffset2.x *= 0.3;
+		// float3 target_text = float3(b.uv2-0.5f, 0) * float3(_scaleOffset2.xy,1);
+		
+		float circlePhase = min(((10*_Circle - length(b.position))/10*_Circle)*10, 1);//内側が1
+		circlePhase=1;
+		// b.size = circlePhase;
+		float targetPhase = 0;
+		// float3 target = lerp(b.target, target_text, max(_targetFade, circlePhase));
+
+		circlePhase = max(0, circlePhase - _targetFade);
+		float tmp_t = 0.5;
+		float activatorphase = max(0.0, (tmp_t-length(b.position.xz-_activator.xz))/tmp_t);
+		activatorphase = 1;
+		// b.indivTargetWeight =  max(0.0,lerp(b.indivTargetWeight, 1, activatorphase*_targetFade));
+		// b.indivTargetWeight = 0.0;
+		
+		// // 壁に近づいたら反発する力を与える
+		force += avoidWall(b.position) * _AvoidWallWeight; 
+		float lw = min(2.0, 1.0/max(0.0001, length(b.position- target_fin)));
+		// force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
+		_targetFade *= b.indivTargetWeight;
+
+		force += (targetForce(b.position, target_fin) *10 - b.velocity*1*lw) * _targetFade * _targetWeight * min(1, b.indivTargetWeight);
+		force += CurlNoise(b.position*50, _Time*3) *  _turbulanceFade * _turbulanceWeight * b.indivTurblulanceWeight;
+		force += float3(0,-1,0) * _gravityWeight * _gravityFade * b.indivGravityWeight;
+		force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade) * b.indivBoidsPileWeight;
+
+		float4 tmp_color1 = float4(0.5,0.5,0.5,1);
+		// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
+		float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
+		float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
+		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
+		if(_endingScene) b.color1 = float4(0,1,0,1);
+		force = limit(force, _MaxSteerForce);           // 操舵力を制限
+		b.velocity *= 0.95;
+		b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
+		b.velocity = limit(b.velocity, _MaxSpeed); // 速度を制限
+		b.position += b.velocity * _DeltaTime;     // 位置を更新		
+	}
+	_BoidDataBufferWrite[P_ID] = b;            // 計算結果を書き込む
+}
