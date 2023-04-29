@@ -17,6 +17,7 @@ public class animationServer : MonoBehaviour
     public Vector3[] list_PositionOffsets;
     public Vector3[] list_RotationOffsets;
     public Vector3[] list_AnkerOffsets;
+    public float[] list_Scales;
     public int numFrames = 0;
     public string name = "noname";
     // Start is called before the first frame update
@@ -25,6 +26,8 @@ public class animationServer : MonoBehaviour
         numFrames = models.Length;
         for(int i=0; i<numFrames; i++){
             list_PositionOffsets[i] = refGOs[i].transform.position;
+            list_Scales[i] = refGOs[i].transform.localScale.x;
+            list_RotationOffsets[i] = refGOs[i].transform.rotation.eulerAngles;
             // list_RotationOffsets = refGOs[i].transform.rotation;
         }
     }

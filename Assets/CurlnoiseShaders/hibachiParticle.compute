@@ -76,15 +76,15 @@ float _boidPileFade;// テクスチャの目標地点に向かう強さの重み
 float3 _activator;
 
 
-float4 _scaleOffset1;
-float4 _scaleOffset2;
-float4 _scaleOffset3;
+// float4 _scaleOffset1;
+// float4 _scaleOffset2;
+// float4 _scaleOffset3;
 
 int _emitParticles;
 int _startingScene;
 int _endingScene;
 float _particleLifeTime;
-float3 _position_offset, _anker_offset, _rotation_offset;
+float3 _position_offset, _anker_offset, _rotation_offset, _scale_offset;
 
 float _CurlNoiseWeight; // ノイズによる操舵力の重み
 
@@ -94,6 +94,7 @@ Texture2D<float4> _colTex0, _colTex1, _colTex2, _colTex3, _colTex4;
 float3 _posOffset0, _posOffset1, _posOffset2, _posOffset3, _posOffset4;
 float3 _rotOffset0, _rotOffset1, _rotOffset2, _rotOffset3, _rotOffset4;
 float3 _ankerOffset0, _ankerOffset1, _ankerOffset2, _ankerOffset3, _ankerOffset4;
+float _scaleOffset0, _scaleOffset1, _scaleOffset2, _scaleOffset3, _scaleOffset4;
 // SamplerState sampler_point_clamp;
 SamplerState sampler_point_clamp;
 
@@ -364,6 +365,7 @@ void IntegrateCS
 	if(b.mode == 2 && b.lifeTime > 15.0){
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
 		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
+			target_scale = _scaleOffset0;
 			if(b.animFrame != 0){
 				b.indivTurblulanceWeight = firstTurblulance;
 				b.animFrame = 0;
@@ -377,12 +379,14 @@ void IntegrateCS
 			// target_fin = b.target;
 			target_fin = t2.xyz*target_scale;
 						
-			target_fin += _posOffset0;
+			
 			target_fin = mul(rotMat, target_fin -_ankerOffset0) +  _ankerOffset0;
+			target_fin += _posOffset0;
 						
 			
 		}
 		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 1)){
+			target_scale = _scaleOffset1;
 			if(b.animFrame != 1){
 				b.indivTurblulanceWeight = firstTurblulance;
 				b.animFrame = 1;
@@ -396,10 +400,12 @@ void IntegrateCS
 			// target_fin = b.target;
 			target_fin = t2.xyz*target_scale;
 						
-			target_fin += _posOffset1;
+			
 			target_fin = mul(rotMat, target_fin -_ankerOffset1) +  _ankerOffset1;
+			target_fin += _posOffset1;
 		}
 		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 2)){
+			target_scale = _scaleOffset2;
 			if(b.animFrame != 2){
 				b.indivTurblulanceWeight = firstTurblulance;
 				b.animFrame = 2;
@@ -413,8 +419,9 @@ void IntegrateCS
 			// target_fin = b.target;
 			target_fin = t2.xyz*target_scale;
 						
-			target_fin += _posOffset2;
+			
 			target_fin = mul(rotMat, target_fin -_ankerOffset2) +  _ankerOffset2;
+			target_fin += _posOffset2;
 			
 		}
 		// b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.01);
@@ -460,8 +467,8 @@ void IntegrateCS
 		float3 boidforce = _BoidForceBufferRead[P_ID]; // 操舵力を読み込む
 
 		// b.color1 = lerp(b.color2, _tex2.SampleLevel(sampler_point_clamp, b.uv2, 0), 0.9);
-		_scaleOffset2.y *= 4;
-		_scaleOffset2.x *= 0.3;
+		// _scaleOffset2.y *= 4;
+		// _scaleOffset2.x *= 0.3;
 		// float3 target_text = float3(b.uv2-0.5f, 0) * float3(_scaleOffset2.xy,1);
 		
 		float circlePhase = min(((10*_Circle - length(b.position))/10*_Circle)*10, 1);//内側が1
@@ -490,8 +497,8 @@ void IntegrateCS
 
 		float4 tmp_color1 = float4(0.5,0.5,0.5,1);
 		// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
-		float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
-		float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
+		// float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
+		// float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
 		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
 		if(_endingScene) b.color1 = float4(0,1,0,1);
 		force = limit(force, _MaxSteerForce);           // 操舵力を制限

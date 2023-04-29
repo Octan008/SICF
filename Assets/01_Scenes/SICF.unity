@@ -5624,7 +5624,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8980549144392899874, guid: db73d1d79b593364d8371b8d85748383, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: -4216948427090074523, guid: db73d1d79b593364d8371b8d85748383, type: 3}
@@ -5904,6 +5904,11 @@ MonoBehaviour:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
+  list_Scales:
+  - 0
+  - 0
+  - 0
+  - 0
   numFrames: 0
   name: noname
 --- !u!1 &1992813169

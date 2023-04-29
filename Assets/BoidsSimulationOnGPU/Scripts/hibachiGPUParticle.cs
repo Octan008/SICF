@@ -332,6 +332,7 @@ namespace BoidsSimulationOnGPU
             cs.SetVector("_position_offset", position_offset);
             cs.SetVector("_anker_offset", anker_offset);
             cs.SetVector("_rotation_offset", rotation_offset);// + new Vector3(0,Time.time*10,0));
+            
             cs.SetFloat("_targetWeight", _targetWeight);
             cs.SetFloat("_turbulanceWeight", _turbulanceWeight);
             cs.SetFloat("_gravityWeight", _gravityWeight);
@@ -349,6 +350,7 @@ namespace BoidsSimulationOnGPU
                 cs.SetVector("_posOffset"+(i.ToString()), scenes[0].list_PositionOffsets[i]);
                 cs.SetVector("_rotOffset"+(i.ToString()), scenes[0].list_RotationOffsets[i]);
                 cs.SetVector("_ankerOffset"+(i.ToString()), scenes[0].list_AnkerOffsets[i]);
+                cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[0].list_Scales[i]);
             }
             cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
         }
