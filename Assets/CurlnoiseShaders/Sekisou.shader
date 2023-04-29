@@ -24,10 +24,6 @@ Shader "Unlit/Sekisou"
             #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
-            #include "SimplexNoise.cginc"
-            #include "NoiseMath.cginc"
-            #include "Curlnoise.cginc"
-
 
             struct appdata
             {
@@ -56,6 +52,9 @@ Shader "Unlit/Sekisou"
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
             }
+            #include "./SimplexNoise.cginc"
+            #include "./NoiseMath.cginc"
+            #include "./Curlnoise.cginc"
 
             fixed4 frag (v2f i) : SV_Target
             {
@@ -63,12 +62,14 @@ Shader "Unlit/Sekisou"
                 fixed4 col = tex2D(_MainTex, i.uv);
                 float ex_uvy = pow(i.uv.y, 0.5);
                 fixed4 col_noise =  tex2D(_MainTex, i.uv*4);
-                float noise_pow = 3;
+                float noise_pow = 2;
                 float noise = length(col_noise) * pow(1-ex_uvy, noise_pow);
+                float noisefreq = 15;
+                noise = Pnoise(float3(i.uv*noisefreq, 0), 0.5)* pow(1-ex_uvy, noise_pow)*0.1;
                 int num_col = 4;
-                
-               ex_uvy -= +noise*3*noise_pow;
-                bool black =  _Frequency > ex_uvy * _Frequency+_Phase;
+                float raw_uvy = ex_uvy;
+                ex_uvy -= +noise*3*noise_pow;
+                bool black =  _Frequency > ex_uvy * _Frequency+_Phase || _Frequency > raw_uvy * _Frequency+_Phase;
                 if(black){
                     col = float4(0,0,0,1);
                     return col;

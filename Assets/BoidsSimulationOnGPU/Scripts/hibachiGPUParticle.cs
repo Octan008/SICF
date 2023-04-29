@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEditor;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -38,6 +39,7 @@ namespace BoidsSimulationOnGPU
 
         public hibachiOperationBase operationBase;
         public animationServer[] scenes;
+        public bool continuing =true;
 
 
         public hibachiGPUTrails trails;
@@ -154,13 +156,16 @@ namespace BoidsSimulationOnGPU
             tmp_ply_num = operationBase.texA.width;
             Debug.Log(tmp_ply_num);
             InitBuffer();
+            time_last = Time.time;
         }
 
         void Update()
         {
             // シミュレーション
-            Simulation();
-            if(_renderTrails) trails.LateUpdate_Trails();
+            if(continuing){
+                Simulation();
+                if(_renderTrails) trails.LateUpdate_Trails();
+            }
             // trailParticles.Update_TrailParticles();
         }
 
@@ -212,6 +217,8 @@ namespace BoidsSimulationOnGPU
         [ContextMenu("Play")]
         public void PlayScene(){
            Refreshing = true;
+           time_last = Time.time;
+           Ending = false;
         }
         public bool Ending;
         [ContextMenu("End")]
@@ -282,6 +289,7 @@ namespace BoidsSimulationOnGPU
             forceArr = null;
             boidDataArr = null;
         }
+        float time_last = 0.0f;
 
         // シミュレーション
         void Simulation()
@@ -318,7 +326,7 @@ namespace BoidsSimulationOnGPU
             // 操舵力から、速度と位置を計算
             id = cs.FindKernel("IntegrateCS"); // カーネルIDを取得
             cs.SetFloat("_DeltaTime", Time.deltaTime);
-            cs.SetFloat("_Time", Time.time);
+            cs.SetFloat("_Time", Time.time - time_last);
             // cs.SetFloat("_Circle", operationBase._CirclePhase);
             cs.SetFloat("_targetFade", operationBase._targetFade);
             cs.SetFloat("_turbulanceFade", operationBase._turbulanceFade);
@@ -331,7 +339,7 @@ namespace BoidsSimulationOnGPU
             cs.SetVector("_activator", activator.position);
             cs.SetVector("_position_offset", position_offset);
             cs.SetVector("_anker_offset", anker_offset);
-            cs.SetVector("_rotation_offset", rotation_offset+ new Vector3(0,Time.time*2,0));
+            cs.SetVector("_rotation_offset", rotation_offset);//+ new Vector3(0,Time.time*2,0));
             
             cs.SetFloat("_targetWeight", _targetWeight);
             cs.SetFloat("_turbulanceWeight", _turbulanceWeight);
@@ -372,4 +380,23 @@ namespace BoidsSimulationOnGPU
         }
         #endregion
     } // class
+    [CustomEditor(typeof(hibachiGPUParticle))]//拡張するクラスを指定
+    public class hibachiGPUParticleEditor : Editor {
+
+    /// <summary>
+    /// InspectorのGUIを更新
+    /// </summary>
+    public override void OnInspectorGUI(){
+        //元のInspector部分を表示
+        base.OnInspectorGUI ();
+        hibachiGPUParticle basehibachi = target as hibachiGPUParticle;
+
+
+        //ボタンを表示
+        if (GUILayout.Button("Restart")){
+            basehibachi.PlayScene();
+        }  
+    }
+
+    }  
 } // namespace

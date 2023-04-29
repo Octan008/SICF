@@ -288,6 +288,7 @@ void IntegrateCS
 
 	float height = 0.146;
 	float Floor = -height;
+	float raiseTime = 13.0f;
 
 	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む
 	b.lifeTime += _DeltaTime;
@@ -317,7 +318,7 @@ void IntegrateCS
 		b.position = float3(_activator.x, height, _activator.z) + float3(rand(b.position.xy, 0) * 2 - 1, 0, rand(b.position.xz, 0) * 2 - 1) * 0.02;
 		b.velocity *= 0;
 	}
-	b.size = max(0, min(1, b.lifeTime)) * 0.5; 
+	if(!_endingScene)b.size = max(0, min(1, b.lifeTime)) * 0.5; 
 	float3 target_fin = b.target;
 	//if (fmod(floor(b.lifeTime / 2) , 3) == 0){
 	//	target_fin = b.target;
@@ -336,10 +337,29 @@ void IntegrateCS
 	}
 
 	
-	if(b.position.y < Floor+0.001 && b.mode == 0 && b.lifeTime > 7.0f){
-		b.mode = 1;
-	}
+	// if(b.position.y < Floor+0.001 && b.mode == 0 && b.lifeTime > 7.0f){
+	// 	b.mode = 1;
+	// }
+	//0430
 	float speed_multi = 1;
+	if(b.position.y < Floor+0.001 && b.mode == 0 && _Time > raiseTime){
+		// b.mode = 2;
+		b.indivGravityWeight = 0;
+		b.indivBoidsPileWeight = 1;
+		b.indivTurblulanceWeight = 1;
+		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) > 0.8){
+			speed_multi = b.indivTurblulanceWeight;
+		}
+		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) < 0.9) {
+			b.mode = 2;
+			// b.indivTurblulanceWeight = 0;
+		}
+		else{
+			b.mode = 1;
+			if(!_endingScene)b.size =2;
+		}
+	}
+	
 	if(b.mode == 1){
 		// b.size = lerp(b.size, 1, 0.000001)*0.5;
 		b.indivGravityWeight = lerp(b.indivGravityWeight, 0, 0.1);
@@ -355,17 +375,18 @@ void IntegrateCS
 	}
 	float2 new_uv = b.uv2;
 	float turbulanceFading = 0.04;
-	float stopTimeInv = 0.2;
-	float firstTurblulance = 2;
-	float topTimeoffset = 10;
+	float stopTimeInv = 0.1;
+	float firstTurblulance = 1.5;
+	float topTimeoffset = 20;
 	float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
 	// float sizeFin = b.size;
 	float target_scale = 0.005;
 	
 	if(b.mode == 2 && b.lifeTime > 15.0){
 		float timeshift = (b.position.x - 0.2);
-		float settleFading = 2;
+		float settleFading = 3;
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
+		float4x4 rotMat_center = eulerAnglesToRotationMatrix(eularAngles2radian(float3(0,_Time*2,0)));
 		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
 		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , 3)) == 0){
 			target_scale = _scaleOffset0;
@@ -440,11 +461,13 @@ void IntegrateCS
 			
 			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 		}
+		target_fin = mul(rotMat_center, target_fin);
 		// b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.01);
 		// b.size = 1 + max(1 - b.indivTurblulanceWeight, 0)*0.1;
 		// if(b.indivTurblulanceWeight > 1.99) b.mode = 3;
-		float mulmul = min(max(0.5,1-2*length(b.position- target_fin)), 1);
-		b.size *= mulmul * mulmul;
+		float mulmul = min(max(0.5,1-4*length(b.position- target_fin)), 1);
+		if(!_endingScene) b.size *= mulmul * mulmul*2;
+		// b.size *= 2;
 		// b.size = mulmul * mulmul*0.5;
 		// b.size = 0.5;
 		// b.size = lerp(b.size, mulmul * mulmul, 0.5);
@@ -466,16 +489,16 @@ void IntegrateCS
 		_targetFade = 0;
 		_gravityFade = 1;
 		_boidPileFade = 1;
-		_turbulanceFade = 1;
+		_turbulanceFade = 0.1;
 		// b.lifeTime = -1;
-		b.size = 1;
+		// b.size = lerp(b.size, 0.0, 0.1);
 		b.mode = 0;
 	}
 
 
 	if(b.position.y < Floor+0.01 && b.mode == 0){
-		b.position.y = lerp(b.position.y, Floor, 0.1);
-		b.velocity.y = lerp(b.velocity, 0, 0.1);
+		b.position.y = lerp(b.position.y, Floor, 0.9);
+		b.velocity.y = lerp(b.velocity, 0, 0.9);
 	}
 
 	if(b.lifeTime >= 0.0 || _endingScene){
@@ -516,7 +539,10 @@ void IntegrateCS
 		// float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
 		// float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
 		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
-		if(_endingScene) b.color1 = float4(0,1,0,1);
+		if(_endingScene) {
+			b.color1 = float4(1,0.5, 0.5,1)*0.5;
+			b.size = lerp(b.size, 0.0, 0.005);
+		}
 		force = limit(force, _MaxSteerForce);           // 操舵力を制限
 		b.velocity *= 0.95;
 		b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
