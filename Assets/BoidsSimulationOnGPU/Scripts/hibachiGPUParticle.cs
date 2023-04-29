@@ -331,7 +331,7 @@ namespace BoidsSimulationOnGPU
             cs.SetVector("_activator", activator.position);
             cs.SetVector("_position_offset", position_offset);
             cs.SetVector("_anker_offset", anker_offset);
-            cs.SetVector("_rotation_offset", rotation_offset);// + new Vector3(0,Time.time*10,0));
+            cs.SetVector("_rotation_offset", rotation_offset+ new Vector3(0,Time.time*2,0));
             
             cs.SetFloat("_targetWeight", _targetWeight);
             cs.SetFloat("_turbulanceWeight", _turbulanceWeight);

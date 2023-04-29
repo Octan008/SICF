@@ -354,17 +354,20 @@ void IntegrateCS
 		}
 	}
 	float2 new_uv = b.uv2;
-	float turbulanceFading = 0.2;
-	float stopTimeInv = 0.5;
-	float firstTurblulance = 10;
-	float topTimeoffset = 0.2;
+	float turbulanceFading = 0.04;
+	float stopTimeInv = 0.2;
+	float firstTurblulance = 2;
+	float topTimeoffset = 10;
 	float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
 	// float sizeFin = b.size;
 	float target_scale = 0.005;
 	
 	if(b.mode == 2 && b.lifeTime > 15.0){
+		float timeshift = (b.position.x - 0.2);
+		float settleFading = 2;
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
-		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
+		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
+		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , 3)) == 0){
 			target_scale = _scaleOffset0;
 			if(b.animFrame != 0){
 				b.indivTurblulanceWeight = firstTurblulance;
@@ -372,7 +375,7 @@ void IntegrateCS
 			}
 			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset0+_rotation_offset));
 			
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			
 			float4 t2 = _posTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			float4 c2 = _colTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			tmp_color2 = lerp(b.color2, c2, 0.9);
@@ -382,10 +385,15 @@ void IntegrateCS
 			
 			target_fin = mul(rotMat, target_fin -_ankerOffset0) +  _ankerOffset0;
 			target_fin += _posOffset0;
+			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
+			turbulanceFading *= targetTimeShift;
+			
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 						
 			
 		}
-		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 1)){
+		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 1)){
+		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)* stopTimeInv), 3) == 1)){
 			target_scale = _scaleOffset1;
 			if(b.animFrame != 1){
 				b.indivTurblulanceWeight = firstTurblulance;
@@ -393,7 +401,7 @@ void IntegrateCS
 			}
 			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset1+_rotation_offset));
 							
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			
 			float4 t2 = _posTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			float4 c2 = _colTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			tmp_color2 = lerp(b.color2, c2, 0.9);
@@ -403,8 +411,13 @@ void IntegrateCS
 			
 			target_fin = mul(rotMat, target_fin -_ankerOffset1) +  _ankerOffset1;
 			target_fin += _posOffset1;
+			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
+			turbulanceFading *= targetTimeShift;
+			
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 		}
-		if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 2)){
+		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 2)){
+		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)* stopTimeInv), 3) == 2)){
 			target_scale = _scaleOffset2;
 			if(b.animFrame != 2){
 				b.indivTurblulanceWeight = firstTurblulance;
@@ -412,7 +425,7 @@ void IntegrateCS
 			}
 			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset2+_rotation_offset));
 							
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+			
 			float4 t2 = _posTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			float4 c2 = _colTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
 			tmp_color2 = lerp(b.color2, c2, 0.9);
@@ -422,13 +435,16 @@ void IntegrateCS
 			
 			target_fin = mul(rotMat, target_fin -_ankerOffset2) +  _ankerOffset2;
 			target_fin += _posOffset2;
+			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
+			turbulanceFading *= targetTimeShift;
 			
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 		}
 		// b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.01);
 		// b.size = 1 + max(1 - b.indivTurblulanceWeight, 0)*0.1;
 		// if(b.indivTurblulanceWeight > 1.99) b.mode = 3;
-		float mulmul = min(max(0.5,1-20*length(b.position- target_fin)), 1);
-		// b.size *= mulmul * mulmul;
+		float mulmul = min(max(0.5,1-2*length(b.position- target_fin)), 1);
+		b.size *= mulmul * mulmul;
 		// b.size = mulmul * mulmul*0.5;
 		// b.size = 0.5;
 		// b.size = lerp(b.size, mulmul * mulmul, 0.5);

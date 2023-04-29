@@ -57,14 +57,20 @@ Shader "Unlit/Sekisou"
             {
                 // sample the texture
                 fixed4 col = tex2D(_MainTex, i.uv);
+                float ex_uvy = pow(i.uv.y, 0.5);
+                fixed4 col_noise =  tex2D(_MainTex, i.uv*2);
+                float noise = length(col_noise) * max((1-ex_uvy)*1, 0);
                 int num_col = 4;
-                float pp = i.uv.y * _Frequency+_Phase;
+                
+                ex_uvy += +noise*1;
+                float pp = ex_uvy * _Frequency+_Phase;
                 bool black =  _Frequency > pp;
                 if(black){
                     col = float4(0,0,0,1);
                     return col;
                 }
                 float pp_f = frac(pp);
+                pp_f = pow(pp_f, 1);
                 int pp_i = floor(pp)%num_col;
                 float4 col1 = float4(1,1,1,1);
                 float4 col2 = float4(1,1,1,1);
@@ -84,8 +90,14 @@ Shader "Unlit/Sekisou"
                     col1 = _Color4;
                     col2 = _Color1;
                 }
+                float saturation = min(1,i.uv.y*0.8);
+                
                 col *= i.uv.y;
                 col = col1 * (1-pp_f) + col2 * pp_f;
+                float gamma = (col.x + col.y + col.z) / 3;
+                float3 gray = float3(1,1,1) * gamma;
+                gray = float3(0.3,0.3,0.3);
+                col.xyz = saturation * col + (1-saturation) * gray;
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
