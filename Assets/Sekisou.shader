@@ -99,7 +99,7 @@ Shader "Unlit/Sekisou"
                     col1 = _Color4;
                     col2 = _Color1;
                 }
-                float saturation = min(1,i.uv.y*0.8);
+                float saturation = min(1,i.uv.y*0.2);
                 
                 col *= i.uv.y;
                 col = col1 * (1-pp_f) + col2 * pp_f;
@@ -108,6 +108,7 @@ Shader "Unlit/Sekisou"
                 gray = float3(0.3,0.3,0.3);
                 col.xyz = saturation * col + (1-saturation) * gray;
                 // apply fog
+                // col.xyz *= 0.2;
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }

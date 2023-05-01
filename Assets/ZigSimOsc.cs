@@ -125,7 +125,7 @@ public class ZigSimOsc : MonoBehaviour {
         if(debug_activator){
             targetPosition.x = 2*Mathf.Sin(0.05f*10.0f * Time.time)*0.05f;
             targetPosition.z = 3*Mathf.Cos(0.05f*11.0f * Time.time)*0.05f;
-             activator.position = Vector3.Lerp(activator.position, targetPosition, 0.5f);
+            activator.position = Vector3.Lerp(activator.position, targetPosition, 0.5f);
         }
     }
 }

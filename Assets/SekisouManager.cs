@@ -6,6 +6,7 @@ public class SekisouManager : MonoBehaviour
 {
     public Material Mat;
     public int phase = 0;
+    public bool phaseupconpleted = false;
     public float phase_f = 0f;
     // Start is called before the first frame update
     void Start()
@@ -15,7 +16,11 @@ public class SekisouManager : MonoBehaviour
     [ContextMenu("PhaseUp")]
     public void PhaseUp()
     {
-        phase++;
+        if(!phaseupconpleted) phase++;
+        phaseupconpleted = true;
+    }
+    public void resetForScene(){
+        phaseupconpleted = false;
     }
 
     // Update is called once per frame
@@ -23,5 +28,6 @@ public class SekisouManager : MonoBehaviour
     {
         phase_f = Mathf.Lerp(phase_f, phase, 0.1f);
         Mat.SetFloat("_Phase", phase_f);
+        // if(phaseupenabled) PhaseUp();
     }
 }
