@@ -44,8 +44,8 @@ namespace BoidsSimulationOnGPU
         const int SIMULATION_BLOCK_SIZE = 256;
 
         public hibachiOperationBase operationBase;
-        public animationServer[] scenes;
-        public int currentSceneId;
+        public animationServer[] Scenes;
+        public int currentSceneId = 0;
         int SceneCount = 4;
         public bool continuing =true;
 
@@ -63,6 +63,8 @@ namespace BoidsSimulationOnGPU
         public float respawnLifeTime = 30.0f;
         public bool _renderTrails = true;
         public Vector3 position_offset, anker_offset, rotation_offset;
+
+        public ZigSimOsc oscmanager;
 
         // 結合を適用する他の個体との半径
         public float CohesionNeighborhoodRadius = 2.0f;
@@ -171,26 +173,29 @@ namespace BoidsSimulationOnGPU
         {
             // バッファを初期化
             tmp_ply_num = operationBase.texA.width;
+            SceneCount = Scenes.Length;
             Debug.Log(tmp_ply_num);
             for(int i=0; i<SceneCount; i++){
-                scenes[i].InitProps();
+                Scenes[i].InitProps();
             }
             InitBuffer();
             InitSceneBuffer();
             time_last = Time.time;
         }
         public float endingbuffer = 2;
+        public int botMode = 0;
 
         void Update()
         {
+            sceneControl();
             // シミュレーション
             if(continuing){
                 Simulation();
                 if(_renderTrails) trails.LateUpdate_Trails();
             }
-            if(Ending &&  (Time.time - time_last) - endingTime > endingbuffer){
-                SekisouManager.PhaseUp();
-            }
+
+
+            
             // trailParticles.Update_TrailParticles();
         }
 
@@ -252,9 +257,29 @@ namespace BoidsSimulationOnGPU
             Ending = true;
             endingTime = Time.time - time_last;
         }
+        int endBotModeId = 3;
 
+        void sceneControl(){
+            if(oscmanager.botMode == 0 && botMode != 0){
+                Debug.Log("play");
+                this.PlayScene();
+            }
+            botMode = oscmanager.botMode;
+
+            if(!Ending &&  (Time.time - time_last)  > Scenes[currentSceneId].sceneTimeLength){
+                EndScene();
+                
+            }
+
+            if(Ending &&  (Time.time - time_last) - endingTime > endingbuffer){
+                SekisouManager.PhaseUp();
+                currentSceneId = (currentSceneId + 1)%SceneCount;
+            }
+
+        }
         void LateUpdate(){
             Refreshing = false;
+            
             // Ending = false;
         }
         void InitSceneBuffer(){
@@ -262,19 +287,19 @@ namespace BoidsSimulationOnGPU
             colorMapArray = new ComputeBuffer[SceneCount];
             propsArrayBuffer = new ComputeBuffer[SceneCount];
             for(int i = 0; i < SceneCount; i++){
-                // positionMapArray[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
-                // colorMapArray[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
-                propsArrayBuffer[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(FrameProps)));
-                var positionMapArr = new Texture2D[scenes[i].numFrames];
-                var colorMapArr = new Texture2D[scenes[i].numFrames];
-                var propsArr = new FrameProps[scenes[i].numFrames];
-                for (int j = 0; j < scenes[i].numFrames; j++){
-                    // positionMapArr[j] = scenes[i].positionMap(j);
-                    // colorMapArr[j] = scenes[i].colorMap(j);
-                    propsArr[j].PositionOffset  = scenes[i].list_PositionOffsets[j];
-                    propsArr[j].RotationOffset     = scenes[i].list_RotationOffsets[j];
-                    propsArr[j].ScaleOffset        = scenes[i].list_Scales[j];
-                    propsArr[j].AnkerOffset        = scenes[i].list_AnkerOffsets[j];
+                // positionMapArray[i] = new ComputeBuffer(Scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
+                // colorMapArray[i] = new ComputeBuffer(Scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
+                propsArrayBuffer[i] = new ComputeBuffer(Scenes[i].numFrames, Marshal.SizeOf(typeof(FrameProps)));
+                var positionMapArr = new Texture2D[Scenes[i].numFrames];
+                var colorMapArr = new Texture2D[Scenes[i].numFrames];
+                var propsArr = new FrameProps[Scenes[i].numFrames];
+                for (int j = 0; j < Scenes[i].numFrames; j++){
+                    // positionMapArr[j] = Scenes[i].positionMap(j);
+                    // colorMapArr[j] = Scenes[i].colorMap(j);
+                    propsArr[j].PositionOffset  = Scenes[i].list_PositionOffsets[j];
+                    propsArr[j].RotationOffset     = Scenes[i].list_RotationOffsets[j];
+                    propsArr[j].ScaleOffset        = Scenes[i].list_Scales[j];
+                    propsArr[j].AnkerOffset        = Scenes[i].list_AnkerOffsets[j];
                 }
                 // positionMapArray[i].SetData(positionMapArr);
                 // colorMapArray[i].SetData(colorMapArr);
@@ -316,7 +341,9 @@ namespace BoidsSimulationOnGPU
                 // int v = i%422;
                 boidDataArr[i].Color1 = texA[u,v];
                 // boidDataArr[i].UV1 = boidDataArr[i].UV1*442.0f;
-                boidDataArr[i].UV2 = new Vector2((float)u/(tmp_ply_num-1),(float)v/(tmp_ply_num-1));
+                // boidDataArr[i].UV2 = new Vector2((float)u/(tmp_ply_num-1),(float)v/(tmp_ply_num-1));
+                // boidDataArr[i].UV2 = new Vector2((float)i*0.00001f,(float)i*0.00001f);
+                boidDataArr[i].UV2 = new Vector2(Random.value, Random.value);
                 // boidDataArr[i].Position = Vector3.Scale(new Vector3(boidDataArr[i].UV1.x-0.5f, boidDataArr[i].UV1.y-0.5f, 0) , tmp_pos_scl);
                 Vector4 a = (Vector4)texB[u,v];
                 // boidDataArr[i].Position = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , tmp_pos_scl);
@@ -402,25 +429,34 @@ namespace BoidsSimulationOnGPU
             cs.SetFloat("_boidPileWeight", _boidPileWeight);
 
             cs.SetInt("_currentSceneId", currentSceneId);
-            cs.SetInt("_curretSceneFrameCount", scenes[currentSceneId].numFrames);
-            // cs.SetInt("_currentSceneFrameId", currentSceneFrameId);
+            cs.SetInt("_curretSceneFrameCount", Scenes[currentSceneId].numFrames);
+            cs.SetFloat("_handParticleRate", Scenes[currentSceneId].handParticleRate);
+            cs.SetFloat("_staticParticleRate", Scenes[currentSceneId].staticParticleRate);
             cs.SetBuffer(id, "_BoidForceBufferRead", _boidForceBuffer);
             cs.SetBuffer(id, "_BoidDataBufferWrite", boidDataBuffer);
-            // cs.SetTexture(id, "_tex0", operationBase.texC);
-            // cs.SetTexture(id, "_tex2", operationBase.texB);
             cs.SetTexture(id, "_tex1", operationBase.texA);
+             if(Scenes[currentSceneId].haveStaticObj){
+                cs.SetVector("_posOffset_static",  Scenes[currentSceneId].staticOffsets[0]);
+                cs.SetVector("_rotOffset_static",  Scenes[currentSceneId].staticOffsets[1]);
+                cs.SetFloat("_scaleOffset_static",  Scenes[currentSceneId].staticScale);
+                cs.SetTexture(id, "_posTex_static", Scenes[currentSceneId].staticPositionMap());
+                cs.SetTexture(id, "_colTex_static", Scenes[currentSceneId].staticColorMap());
+            }
+            else{
+                cs.SetVector("_posOffset_static", new Vector3(0,0,0));
+                cs.SetVector("_rotOffset_static",  new Vector3(0,0,0));
+                cs.SetFloat("_scaleOffset_static",  1.0f);
+                cs.SetTexture(id, "_posTex_static", Scenes[currentSceneId].positionMap(0));
+                cs.SetTexture(id, "_colTex_static", Scenes[currentSceneId].positionMap(0));
+            }
             for(int i=0; i<6; i++){ 
-                if(i < scenes[currentSceneId].numFrames){
-                    cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(i));
-                    cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[currentSceneId].colorMap(i));
-                    // cs.SetVector("_posOffset"+(i.ToString()), scenes[currentSceneId].list_PositionOffsets[i]);
-                    // cs.SetVector("_rotOffset"+(i.ToString()), scenes[currentSceneId].list_RotationOffsets[i]);
-                    // cs.SetVector("_ankerOffset"+(i.ToString()), scenes[currentSceneId].list_AnkerOffsets[i]);
-                    // cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[currentSceneId].list_Scales[i]);
+                if(i < Scenes[currentSceneId].numFrames){
+                    cs.SetTexture(id, "_posTex"+(i.ToString()), Scenes[currentSceneId].positionMap(i));
+                    cs.SetTexture(id, "_colTex"+(i.ToString()), Scenes[currentSceneId].colorMap(i));
                 }
                 else{
-                    cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(0));
-                    cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[currentSceneId].colorMap(0));
+                    cs.SetTexture(id, "_posTex"+(i.ToString()), Scenes[currentSceneId].positionMap(0));
+                    cs.SetTexture(id, "_colTex"+(i.ToString()), Scenes[currentSceneId].colorMap(0));
                 }
             }
             cs.SetBuffer(id, "_framePropsBufferRead", propsArrayBuffer[currentSceneId]);

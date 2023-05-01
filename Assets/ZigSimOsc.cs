@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using OscJack;
 
 using OscJack;
 
@@ -25,7 +26,8 @@ public class ZigSimOsc : MonoBehaviour {
     public Transform activator;
     public Vector3 targetPosition;
     public bool debug_activator = false;
-    
+
+    public int botMode;    
 
     // Use this for initialization
     [ContextMenu("Reset")]
@@ -38,6 +40,13 @@ public class ZigSimOsc : MonoBehaviour {
         targetPosition = activator.position;
         _server = new OscServer(port); // Port number
 
+        _server.MessageDispatcher.AddCallback(
+            "/botMode",
+            (string address, OscDataHandle data) =>
+            {
+               botMode = (int)data.GetElementAsFloat(0);
+            }
+        );
         _server.MessageDispatcher.AddCallback(
             "/ZIGSIM/octaniPad/arkitposition1",
             (string address, OscDataHandle data) =>
@@ -111,6 +120,7 @@ public class ZigSimOsc : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
+        // Debug.Log("botmode : "+botMode);
         //_light.color = _color;
         if(CamControl){
             //go.transform.position = (_arpos+shift - _criterion.position)*mult*hibachiRoot.localScale.x + _criterion.position;
