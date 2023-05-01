@@ -111,15 +111,17 @@ Pass{
 		output2.pos = UnityWorldToClipPos(posNext + (sideDirNext * width));
 		output3.pos = UnityWorldToClipPos(posNext - (sideDirNext * width));
 		
-		float vivid = 0.4;
-		float lightup = 0.1;
+		float vivid = 0.35;
+		float lightup = 0.25;
 		float3 dirColor = input[0].dir;
 		float3 dirColorNext = input[0].dirNext;
 		float up = max(0, dot(float3(0,1,0), input[0].dir));
 		float upNext =  max(0, dot(float3(0,1,0), input[0].dirNext));
-
-		dirColor = up * float3(1,0.9,0.8) + (1-up) * float3(1, 0.8, 1) * 0.7;
-		dirColorNext = upNext *  float3(1,0.9,0.8) +  (1-upNext) * float3(1, 0.8, 1) * 0.7;
+		// float3 upcolor = float3(1,0.9,0.8);
+		float3 upcolor = float3(1,0.9,0.8);
+		float3 othercolor = float3(1, 0.8, 1);
+		dirColor = up * upcolor+ (1-up) *othercolor  * 0.7;
+		dirColorNext = upcolor  * upNext +  (1-upNext) * othercolor * 0.7;
 
 		output0.col =
 		output1.col = input[0].col;

@@ -44,6 +44,7 @@ namespace BoidsSimulationOnGPU
 
         public hibachiGPUTrails trails;
         public hibachiGPUTrailParticles trailParticles;
+        public SekisouManager SekisouManager;
         // public hibachiGPUTrailsRenderer trailsRender;
 
         #region Boids Parameters
@@ -103,6 +104,8 @@ namespace BoidsSimulationOnGPU
         public ComputeBuffer boidDataBuffer;
         ComputeBuffer _boidForceBuffer;
 
+        float endingTime = 0.0f;
+
 
         #region Private Resources
         // Boidの操舵力（Force）を格納したバッファ
@@ -158,6 +161,7 @@ namespace BoidsSimulationOnGPU
             InitBuffer();
             time_last = Time.time;
         }
+        public float endingbuffer = 2;
 
         void Update()
         {
@@ -165,6 +169,9 @@ namespace BoidsSimulationOnGPU
             if(continuing){
                 Simulation();
                 if(_renderTrails) trails.LateUpdate_Trails();
+            }
+            if(Ending &&  (Time.time - time_last) - endingTime > endingbuffer){
+                SekisouManager.PhaseUp();
             }
             // trailParticles.Update_TrailParticles();
         }
@@ -219,11 +226,13 @@ namespace BoidsSimulationOnGPU
            Refreshing = true;
            time_last = Time.time;
            Ending = false;
+           SekisouManager.resetForScene();
         }
         public bool Ending;
         [ContextMenu("End")]
         public void EndScene(){
             Ending = true;
+            endingTime = Time.time - time_last;
         }
 
         void LateUpdate(){
@@ -335,6 +344,7 @@ namespace BoidsSimulationOnGPU
             cs.SetInt("_emitParticles", emitParticles ? 1 : 0);
             cs.SetInt("_startingScene", Refreshing ? 1 : 0);
             cs.SetInt("_endingScene", Ending ? 1 : 0);
+            cs.SetFloat("_endingTime", endingTime);
             cs.SetFloat("_particleLifeTime", respawnLifeTime);
             cs.SetVector("_activator", activator.position);
             cs.SetVector("_position_offset", position_offset);
@@ -395,6 +405,8 @@ namespace BoidsSimulationOnGPU
         //ボタンを表示
         if (GUILayout.Button("Restart")){
             basehibachi.PlayScene();
+}          if (GUILayout.Button("end")){
+            basehibachi.EndScene();
         }  
     }
 

@@ -64,7 +64,7 @@ Shader "Unlit/Sekisou"
                 fixed4 col_noise =  tex2D(_MainTex, i.uv*4);
                 float noise_pow = 2;
                 float noise = length(col_noise) * pow(1-ex_uvy, noise_pow);
-                float noisefreq = 15;
+                float noisefreq = 25;
                 noise = Pnoise(float3(i.uv*noisefreq, 0), 0.5)* pow(1-ex_uvy, noise_pow)*0.1;
                 int num_col = 4;
                 float raw_uvy = ex_uvy;
@@ -100,7 +100,8 @@ Shader "Unlit/Sekisou"
                     col1 = _Color4;
                     col2 = _Color1;
                 }
-                float saturation = min(1,i.uv.y*0.8);
+                float saturation = max(0, min(1,i.uv.y*0.8-0.0));
+                saturation = pow(saturation, 2);
                 
                 col *= i.uv.y;
                 col = col1 * (1-pp_f) + col2 * pp_f;

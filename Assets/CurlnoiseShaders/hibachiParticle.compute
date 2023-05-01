@@ -1,4 +1,5 @@
-﻿// カーネル関数を指定
+﻿
+// カーネル関数を指定
 #pragma kernel ForceCS      // 操舵力を計算
 #pragma kernel IntegrateCS  // 速度, 位置を計算
 
@@ -83,6 +84,7 @@ float3 _activator;
 int _emitParticles;
 int _startingScene;
 int _endingScene;
+float _endingTime;
 float _particleLifeTime;
 float3 _position_offset, _anker_offset, _rotation_offset, _scale_offset;
 
@@ -288,10 +290,12 @@ void IntegrateCS
 
 	float height = 0.146;
 	float Floor = -height;
-	float raiseTime = 13.0f;
+	float raiseTime = 15.0f;
+	
 
 	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む
 	b.lifeTime += _DeltaTime;
+	_endingScene = _endingScene &&( _Time - _endingTime - 10*length(b.position.xz) > 0);
 	if(_startingScene){
 		b.lifeTime = -_particleLifeTime*rand(b.uv2, 0)-1;
 		// b.lifeTime -= _particleLifeTime;
@@ -353,10 +357,11 @@ void IntegrateCS
 		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) < 0.9) {
 			b.mode = 2;
 			// b.indivTurblulanceWeight = 0;
+			// if(!_endingScene)b.size = 4;
 		}
 		else{
 			b.mode = 1;
-			if(!_endingScene)b.size =2;
+			if(!_endingScene)b.size = 2;
 		}
 	}
 	
@@ -375,8 +380,8 @@ void IntegrateCS
 	}
 	float2 new_uv = b.uv2;
 	float turbulanceFading = 0.04;
-	float stopTimeInv = 0.1;
-	float firstTurblulance = 1.5;
+	float stopTimeInv = 0.05;
+	float firstTurblulance = 1;
 	float topTimeoffset = 20;
 	float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
 	// float sizeFin = b.size;
@@ -466,7 +471,7 @@ void IntegrateCS
 		// b.size = 1 + max(1 - b.indivTurblulanceWeight, 0)*0.1;
 		// if(b.indivTurblulanceWeight > 1.99) b.mode = 3;
 		float mulmul = min(max(0.5,1-4*length(b.position- target_fin)), 1);
-		if(!_endingScene) b.size *= mulmul * mulmul*2;
+		if(!_endingScene) b.size *= mulmul * mulmul * 2;
 		// b.size *= 2;
 		// b.size = mulmul * mulmul*0.5;
 		// b.size = 0.5;
@@ -482,13 +487,13 @@ void IntegrateCS
 	//}
 	if(_endingScene){
 		b.indivGravityWeight = lerp(b.indivGravityWeight, 1, 0.1);
-		b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 0, 0.1);
+		b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 0, 0.5);
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.1);
 		b.indivTurblulanceWeight = lerp(b.indivTurblulanceWeight, 0, 0.1);
 		tmp_color2 = float4(0,1,0,1);
 		_targetFade = 0;
 		_gravityFade = 1;
-		_boidPileFade = 1;
+		_boidPileFade = 10;
 		_turbulanceFade = 0.1;
 		// b.lifeTime = -1;
 		// b.size = lerp(b.size, 0.0, 0.1);
@@ -497,8 +502,9 @@ void IntegrateCS
 
 
 	if(b.position.y < Floor+0.01 && b.mode == 0){
-		b.position.y = lerp(b.position.y, Floor, 0.9);
-		b.velocity.y = lerp(b.velocity, 0, 0.9);
+		float flooring_lerp = 0.1;
+		b.position.y = lerp(b.position.y, Floor, flooring_lerp);
+		b.velocity.y = lerp(b.velocity, 0, flooring_lerp);
 	}
 
 	if(b.lifeTime >= 0.0 || _endingScene){
@@ -538,10 +544,13 @@ void IntegrateCS
 		// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
 		// float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
 		// float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
+		
+		tmp_color2 *= 1 + ((sin((Pnoise(b.position*0.5).x+_Time*0.01)*200)+1) * 0.5 * 0.2);
+		// tmp_color2 *= 1 + Pnoise(b.position*1).x + _Time*0.02;
 		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
 		if(_endingScene) {
-			b.color1 = float4(1,0.5, 0.5,1)*0.5;
-			b.size = lerp(b.size, 0.0, 0.005);
+			b.color1 = float4(0.8,1, 0.8,1)*0.5;
+			b.size = lerp(1, 0.0, min(1, max(0, 0.1 *( _Time - _endingTime) )));
 		}
 		force = limit(force, _MaxSteerForce);           // 操舵力を制限
 		b.velocity *= 0.95;
