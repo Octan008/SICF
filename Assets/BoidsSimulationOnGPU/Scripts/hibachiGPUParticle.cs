@@ -34,11 +34,19 @@ namespace BoidsSimulationOnGPU
             public int animFrame;
             public Vector4 extras;
         }
+        struct FrameProps{
+            public Vector3 PositionOffset;
+            public Vector3 RotationOffset;
+            public Vector3 AnkerOffset;
+            public float ScaleOffset;
+        }
         // スレッドグループのスレッドのサイズ
         const int SIMULATION_BLOCK_SIZE = 256;
 
         public hibachiOperationBase operationBase;
         public animationServer[] scenes;
+        public int currentSceneId;
+        int SceneCount = 4;
         public bool continuing =true;
 
 
@@ -103,6 +111,12 @@ namespace BoidsSimulationOnGPU
         public ComputeBuffer boidDataBuffer;
         ComputeBuffer _boidForceBuffer;
 
+        public ComputeBuffer[] positionMapArray;
+        public ComputeBuffer[] colorMapArray; 
+        public Texture2DArray positionMapTexArray;
+        public Texture2DArray colorMapTexArray;
+        public ComputeBuffer[] propsArrayBuffer; 
+
 
         #region Private Resources
         // Boidの操舵力（Force）を格納したバッファ
@@ -155,7 +169,11 @@ namespace BoidsSimulationOnGPU
             // バッファを初期化
             tmp_ply_num = operationBase.texA.width;
             Debug.Log(tmp_ply_num);
+            for(int i=0; i<SceneCount; i++){
+                scenes[i].InitProps();
+            }
             InitBuffer();
+            InitSceneBuffer();
             time_last = Time.time;
         }
 
@@ -229,6 +247,33 @@ namespace BoidsSimulationOnGPU
         void LateUpdate(){
             Refreshing = false;
             // Ending = false;
+        }
+        void InitSceneBuffer(){
+            positionMapArray = new ComputeBuffer[SceneCount];
+            colorMapArray = new ComputeBuffer[SceneCount];
+            propsArrayBuffer = new ComputeBuffer[SceneCount];
+            for(int i = 0; i < SceneCount; i++){
+                // positionMapArray[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
+                // colorMapArray[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(Texture2D)));
+                propsArrayBuffer[i] = new ComputeBuffer(scenes[i].numFrames, Marshal.SizeOf(typeof(FrameProps)));
+                var positionMapArr = new Texture2D[scenes[i].numFrames];
+                var colorMapArr = new Texture2D[scenes[i].numFrames];
+                var propsArr = new FrameProps[scenes[i].numFrames];
+                for (int j = 0; j < scenes[i].numFrames; j++){
+                    // positionMapArr[j] = scenes[i].positionMap(j);
+                    // colorMapArr[j] = scenes[i].colorMap(j);
+                    propsArr[j].PositionOffset  = scenes[i].list_PositionOffsets[j];
+                    propsArr[j].RotationOffset     = scenes[i].list_RotationOffsets[j];
+                    propsArr[j].ScaleOffset        = scenes[i].list_Scales[j];
+                    propsArr[j].AnkerOffset        = scenes[i].list_AnkerOffsets[j];
+                }
+                // positionMapArray[i].SetData(positionMapArr);
+                // colorMapArray[i].SetData(colorMapArr);
+                propsArrayBuffer[i].SetData(propsArr);
+                // positionMapArr = null;
+                // colorMapArr = null;
+                propsArr = null;
+            }
         }
 
         #region Private Functions
@@ -352,14 +397,21 @@ namespace BoidsSimulationOnGPU
             cs.SetTexture(id, "_tex0", operationBase.texC);
             cs.SetTexture(id, "_tex2", operationBase.texB);
             cs.SetTexture(id, "_tex1", operationBase.texA);
-            for(int i=0; i<4; i++){ 
-                cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[0].positionMap(i));
-                cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[0].colorMap(i));
-                cs.SetVector("_posOffset"+(i.ToString()), scenes[0].list_PositionOffsets[i]);
-                cs.SetVector("_rotOffset"+(i.ToString()), scenes[0].list_RotationOffsets[i]);
-                cs.SetVector("_ankerOffset"+(i.ToString()), scenes[0].list_AnkerOffsets[i]);
-                cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[0].list_Scales[i]);
+            for(int i=0; i<6; i++){ 
+                if(i < scenes[currentSceneId].numFrames){
+                    cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(i));
+                    cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[currentSceneId].colorMap(i));
+                    cs.SetVector("_posOffset"+(i.ToString()), scenes[currentSceneId].list_PositionOffsets[i]);
+                    cs.SetVector("_rotOffset"+(i.ToString()), scenes[currentSceneId].list_RotationOffsets[i]);
+                    cs.SetVector("_ankerOffset"+(i.ToString()), scenes[currentSceneId].list_AnkerOffsets[i]);
+                    cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[currentSceneId].list_Scales[i]);
+                }
+                else{
+                    cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(0));
+                    cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[currentSceneId].colorMap(0));
+                }
             }
+            cs.SetBuffer(id, "_framePropsBufferRead", propsArrayBuffer[currentSceneId]);
             cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
         }
 

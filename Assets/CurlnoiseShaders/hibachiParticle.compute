@@ -83,18 +83,40 @@ float3 _activator;
 int _emitParticles;
 int _startingScene;
 int _endingScene;
-float _particleLifeTime;
+float _particlelifeTime;
 float3 _position_offset, _anker_offset, _rotation_offset, _scale_offset;
 
 float _CurlNoiseWeight; // ノイズによる操舵力の重み
 
 Texture2D<float4> _tex0, _tex1, _tex2;
-Texture2D<float4> _posTex0, _posTex1, _posTex2, _posTex3, _posTex4;
-Texture2D<float4> _colTex0, _colTex1, _colTex2, _colTex3, _colTex4;
-float3 _posOffset0, _posOffset1, _posOffset2, _posOffset3, _posOffset4;
-float3 _rotOffset0, _rotOffset1, _rotOffset2, _rotOffset3, _rotOffset4;
-float3 _ankerOffset0, _ankerOffset1, _ankerOffset2, _ankerOffset3, _ankerOffset4;
-float _scaleOffset0, _scaleOffset1, _scaleOffset2, _scaleOffset3, _scaleOffset4;
+
+Texture2D<float4> _posTex0, _posTex1, _posTex2, _posTex3, _posTex4, _posTex5;
+Texture2D<float4> _posTex_static;
+Texture2D<float4> _colTex0, _colTex1, _colTex2, _colTex3, _colTex4, _colTex5;
+Texture2D<float4> _colTex_static;
+
+float3 _posOffset0, _posOffset1, _posOffset2, _posOffset3, _posOffset4, _posOffset5;
+float3 _posOffset_static;
+float3 _rotOffset0, _rotOffset1, _rotOffset2, _rotOffset3, _rotOffset4, _rotOffset5;
+float3 _rotOffset_static;
+float3 _ankerOffset0, _ankerOffset1, _ankerOffset2, _ankerOffset3, _ankerOffset4, _ankerOffset5;
+float3 _ankerOffset_static;
+float _scaleOffset0, _scaleOffset1, _scaleOffset2, _scaleOffset3, _scaleOffset4, _scaleOffset5;
+float _scaleOffset_static;
+
+struct FrameProps{
+	float3 PositionOffset;
+	float3 RotationOffset;
+	
+	float3 AnkerOffset;
+	float ScaleOffset;
+};
+
+StructuredBuffer<FrameProps> _framePropsBufferRead;
+
+int currentSceneId;
+int curretSceneFrameCount;
+int currentSceneFrameId;
 // SamplerState sampler_point_clamp;
 SamplerState sampler_point_clamp;
 
@@ -277,6 +299,26 @@ float fmod(float a, float b)
   }
   return a;
 }
+float4 GetPosFromTex(int id, float2 uv){
+	if(id == 0) return _posTex0.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 1) return _posTex1.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 2) return _posTex2.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 3)return _posTex3.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 4) return  _posTex4.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 5) return _posTex5.SampleLevel(sampler_point_clamp,uv, 0);
+	else return float4(0,0,0,0);
+}
+float4 GetColorFromTex(int id, float2 uv){
+	if(id == 0) return _colTex0.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 1) return _colTex1.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 2) return _colTex2.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 3)return _colTex3.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 4) return  _colTex4.SampleLevel(sampler_point_clamp,uv, 0);
+	else if(id == 5) return _colTex5.SampleLevel(sampler_point_clamp,uv, 0);
+	else return float4(0,0,0,0);
+}
+
+
 // 速度, 位置計算用カーネル関数
 [numthreads(SIMULATION_BLOCK_SIZE, 1, 1)]
 void IntegrateCS
@@ -290,11 +332,11 @@ void IntegrateCS
 	float Floor = -height;
 	float raiseTime = 13.0f;
 
-	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む
+	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む;
 	b.lifeTime += _DeltaTime;
 	if(_startingScene){
-		b.lifeTime = -_particleLifeTime*rand(b.uv2, 0)-1;
-		// b.lifeTime -= _particleLifeTime;
+		b.lifeTime = -_particlelifeTime*rand(b.uv2, 0)-1;
+		// b.lifeTime -= _particlelifeTime;
 		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
@@ -303,10 +345,8 @@ void IntegrateCS
 		b.indivTurblulanceWeight = 0;
 		b.mode = 0;
 	}
-	if(b.lifeTime > _particleLifeTime && _emitParticles == 1){
+	if(b.lifeTime > _particlelifeTime && _emitParticles == 1){
 		b.lifeTime = -1;
-		// b.lifeTime -= _particleLifeTime;
-		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
 		b.indivBoidsPileWeight = 1;
@@ -320,26 +360,12 @@ void IntegrateCS
 	}
 	if(!_endingScene)b.size = max(0, min(1, b.lifeTime)) * 0.5; 
 	float3 target_fin = b.target;
-	//if (fmod(floor(b.lifeTime / 2) , 3) == 0){
-	//	target_fin = b.target;
-	//}
-	//if (fmod(floor(b.lifeTime / 2), 3) == 1){
-	//	target_fin = b.target + float3(-0.1, 0, 0);
-	//}
-	//if (fmod(floor(b.lifeTime / 2), 3) == 2){
-	//	target_fin = b.target + float3(0.1, 0, 0);
-	//}
-	// b.indivTargetWeight = 1;
 		
 	if(b.position.y < Floor+0.001 && b.mode == 0){
 		b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 10, 0.1);
 		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, 0.1);
 	}
 
-	
-	// if(b.position.y < Floor+0.001 && b.mode == 0 && b.lifeTime > 7.0f){
-	// 	b.mode = 1;
-	// }
 	//0430
 	float speed_multi = 1;
 	if(b.position.y < Floor+0.001 && b.mode == 0 && _Time > raiseTime){
@@ -382,104 +408,67 @@ void IntegrateCS
 	// float sizeFin = b.size;
 	float target_scale = 0.005;
 	
+
+	// 22222
 	if(b.mode == 2 && b.lifeTime > 15.0){
 		float timeshift = (b.position.x - 0.2);
 		float settleFading = 3;
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
 		float4x4 rotMat_center = eulerAnglesToRotationMatrix(eularAngles2radian(float3(0,_Time*2,0)));
-		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)*  stopTimeInv) , 3)) == 0){
-		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , 3)) == 0){
-			target_scale = _scaleOffset0;
-			if(b.animFrame != 0){
-				b.indivTurblulanceWeight = firstTurblulance;
-				b.animFrame = 0;
+		FrameProps frameprop = _framePropsBufferRead[0];
+		float4 t2 = float4(0,0,0,0);
+		float4 c2 = float4(0,0,0,0);
+		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , 3));
+		for(int i=0; i<3; i++){
+			if(sceneIdentifier == i){
+				frameprop = _framePropsBufferRead[i];
+				if(b.animFrame != i){
+					b.indivTurblulanceWeight = firstTurblulance;
+					b.animFrame = i;
+				}				
 			}
-			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset0+_rotation_offset));
-			
-			
-			float4 t2 = _posTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			float4 c2 = _colTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			tmp_color2 = lerp(b.color2, c2, 0.9);
-			// target_fin = b.target;
-			target_fin = t2.xyz*target_scale;
-						
-			
-			target_fin = mul(rotMat, target_fin -_ankerOffset0) +  _ankerOffset0;
-			target_fin += _posOffset0;
-			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
-			turbulanceFading *= targetTimeShift;
-			
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
-						
-			
+			t2 = GetPosFromTex(sceneIdentifier,  float2(rand(b.uv2, 0), rand(b.uv2, 100)));
+			c2 = GetColorFromTex(sceneIdentifier,  float2(rand(b.uv2, 0), rand(b.uv2, 100)));
 		}
-		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 1)){
-		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)* stopTimeInv), 3) == 1)){
-			target_scale = _scaleOffset1;
-			if(b.animFrame != 1){
-				b.indivTurblulanceWeight = firstTurblulance;
-				b.animFrame = 1;
-			}
-			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset1+_rotation_offset));
-							
+		// if (sceneIdentifier == 0){
+		// 	t2 = _posTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);			
+		// }
+		// if (sceneIdentifier == 1){			
+		// 	t2 = _posTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// }
+		// if ( sceneIdentifier== 2){					
 			
-			float4 t2 = _posTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			float4 c2 = _colTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			tmp_color2 = lerp(b.color2, c2, 0.9);
-			// target_fin = b.target;
-			target_fin = t2.xyz*target_scale;
-						
-			
-			target_fin = mul(rotMat, target_fin -_ankerOffset1) +  _ankerOffset1;
-			target_fin += _posOffset1;
-			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
-			turbulanceFading *= targetTimeShift;
-			
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
-		}
-		// if (floor(fmod(floor((_Time + length(b.uv2)*topTimeoffset)* stopTimeInv), 3) == 2)){
-		if (floor(fmod(floor((_Time + timeshift*topTimeoffset)* stopTimeInv), 3) == 2)){
-			target_scale = _scaleOffset2;
-			if(b.animFrame != 2){
-				b.indivTurblulanceWeight = firstTurblulance;
-				b.animFrame = 2;
-			}
-			float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(_rotOffset2+_rotation_offset));
-							
-			
-			float4 t2 = _posTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			float4 c2 = _colTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-			tmp_color2 = lerp(b.color2, c2, 0.9);
-			// target_fin = b.target;
-			target_fin = t2.xyz*target_scale;
-						
-			
-			target_fin = mul(rotMat, target_fin -_ankerOffset2) +  _ankerOffset2;
-			target_fin += _posOffset2;
-			float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
-			turbulanceFading *= targetTimeShift;
-			
-			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
-		}
+		// 	t2 = _posTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// }
+		// if (sceneIdentifier == 3){			
+		// 	t2 = _posTex3.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex3.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// }
+		// if (sceneIdentifier == 4){			
+		// 	t2 = _posTex4.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex4.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// }
+		// if (sceneIdentifier == 5){			
+		// 	t2 = _posTex5.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// 	c2 = _colTex5.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
+		// }
+		float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(frameprop.RotationOffset+_rotation_offset));
+		target_scale = frameprop.ScaleOffset;
+		tmp_color2 = lerp(b.color2, c2, 0.9);
+		target_fin = t2.xyz*target_scale;
+		target_fin = mul(rotMat, target_fin - frameprop.AnkerOffset ) +  frameprop.AnkerOffset;
+		target_fin += frameprop.PositionOffset;
+		float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
+		turbulanceFading *= targetTimeShift;
+		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
+
 		target_fin = mul(rotMat_center, target_fin);
-		// b.indivTargetWeight = lerp(b.indivTargetWeight, 2, 0.01);
-		// b.size = 1 + max(1 - b.indivTurblulanceWeight, 0)*0.1;
-		// if(b.indivTurblulanceWeight > 1.99) b.mode = 3;
 		float mulmul = min(max(0.5,1-4*length(b.position- target_fin)), 1);
 		if(!_endingScene) b.size *= mulmul * mulmul*2;
-		// b.size *= 2;
-		// b.size = mulmul * mulmul*0.5;
-		// b.size = 0.5;
-		// b.size = lerp(b.size, mulmul * mulmul, 0.5);
 	}
-	//if (b.mode == 3) {
-	//	//b.lifeTime = -1;
-	//}
-	//if(b.mode == 3){
-	//	b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.01);
-	//	b.size = max(b.indivTargetWeight, 0.3) * 0.5;
-	//	if(b.indivTargetWeight < 0.01) b.mode = 4;
-	//}
 	if(_endingScene){
 		b.indivGravityWeight = lerp(b.indivGravityWeight, 1, 0.1);
 		b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 0, 0.1);
@@ -490,8 +479,6 @@ void IntegrateCS
 		_gravityFade = 1;
 		_boidPileFade = 1;
 		_turbulanceFade = 0.1;
-		// b.lifeTime = -1;
-		// b.size = lerp(b.size, 0.0, 0.1);
 		b.mode = 0;
 	}
 

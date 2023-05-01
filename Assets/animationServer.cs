@@ -17,19 +17,28 @@ public class animationServer : MonoBehaviour
     public Vector3[] list_PositionOffsets;
     public Vector3[] list_RotationOffsets;
     public Vector3[] list_AnkerOffsets;
+    public Texture2D[] list_PositionMaps;
+    public Texture2D[] list_ColorMaps;
     public float[] list_Scales;
-    public int numFrames = 0;
+    public int numFrames = 4;
     public string name = "noname";
     // Start is called before the first frame update
-    void Start()
-    {
+    public void InitProps(){
         numFrames = models.Length;
+        list_PositionMaps = new Texture2D[numFrames];
+        list_ColorMaps = new Texture2D[numFrames];
         for(int i=0; i<numFrames; i++){
             list_PositionOffsets[i] = refGOs[i].transform.position;
             list_Scales[i] = refGOs[i].transform.localScale.x;
             list_RotationOffsets[i] = refGOs[i].transform.rotation.eulerAngles;
+            list_PositionMaps[i] = models[i].positionMap;
+            list_ColorMaps[i] = models[i].colorMap;
             // list_RotationOffsets = refGOs[i].transform.rotation;
         }
+    }
+    void Start()
+    {
+        InitProps();
     }
     public Texture2D positionMap(int i){
         return models[i].positionMap;
