@@ -71,7 +71,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _Phase: 19.999992
+    - _Phase: 104.99997
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -79,9 +79,9 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _Color1: {r: 0.764151, g: 0.39793524, b: 0.3063813, a: 1}
-    - _Color2: {r: 0.24377, g: 0.32103, b: 0.6226415, a: 1}
-    - _Color3: {r: 0.31167677, g: 0.6415094, b: 0.3271983, a: 1}
-    - _Color4: {r: 1, g: 0.64045507, b: 0.5613208, a: 1}
+    - _Color1: {r: 0.014017441, g: 0.118703075, b: 0.5943396, a: 1}
+    - _Color2: {r: 0.008009953, g: 0.5660378, b: 0.029893463, a: 1}
+    - _Color3: {r: 0.5849056, g: 0.08716241, b: 0, a: 1}
+    - _Color4: {r: 0.5283019, g: 0.5283019, b: 0.5283019, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

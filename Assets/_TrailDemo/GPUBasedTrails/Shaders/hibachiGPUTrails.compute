@@ -73,7 +73,7 @@ void CalcInput (uint3 id : SV_DispatchThreadID)
 		{
 			Node node;
 			node.time = _Time;
-			if(_InputBuffer[trailIdx].lifeTime < 0 || _InputBuffer[trailIdx].mode == 0 ||(_InputBuffer[trailIdx].mode == 2 && _InputBuffer[trailIdx].lifeTime > 15.0 && (length(_InputBuffer[trailIdx].velocity) < 0.2 || rand( _InputBuffer[trailIdx].uv2, 0) < 1.0)) || (_InputBuffer[trailIdx].mode == 4 )){
+			if(_InputBuffer[trailIdx].lifeTime < 0 || _InputBuffer[trailIdx].mode == 0 ||((_InputBuffer[trailIdx].mode == 2 || _InputBuffer[trailIdx].mode == 4) && _InputBuffer[trailIdx].lifeTime > 15.0 && (length(_InputBuffer[trailIdx].velocity) < 0.2 || rand( _InputBuffer[trailIdx].uv2, 0) < 1.0)) ){
 				node.time = -1;
 			}
 			// node.time = _InputBuffer[trailIdx].lifeTime;

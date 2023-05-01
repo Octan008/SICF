@@ -55,6 +55,13 @@ Shader "Unlit/Sekisou"
             #include "./SimplexNoise.cginc"
             #include "./NoiseMath.cginc"
             #include "./Curlnoise.cginc"
+            float sigmoid(float x){
+                return 1/(1+exp(-x));
+            }
+            float rand(float2 st, int seed)
+            {
+                return frac(sin(dot(st.xy, float2(12.9898, 78.233)) + seed) * 43758.5453123);
+            }
 
             fixed4 frag (v2f i) : SV_Target
             {
@@ -62,18 +69,23 @@ Shader "Unlit/Sekisou"
                 fixed4 col = tex2D(_MainTex, i.uv);
                 float ex_uvy = pow(i.uv.y, 0.5);
                 fixed4 col_noise =  tex2D(_MainTex, i.uv*4);
-                float noise_pow = 2;
+               float noise_pow = 2;
                 float noise = length(col_noise) * pow(1-ex_uvy, noise_pow);
                 float noisefreq = 25;
+                
                 noise = Pnoise(float3(i.uv*noisefreq, 0), 0.5)* pow(1-ex_uvy, noise_pow)*0.1;
+                float grain =  Pnoise(float3(i.uv, 1), 1000);
+                // grain = pow(grain, 10);
+                grain = sigmoid((grain-0.01)*10);
                 int num_col = 4;
                 float raw_uvy = ex_uvy;
                 ex_uvy -= +noise*3*noise_pow;
                 bool black =  _Frequency > ex_uvy * _Frequency+_Phase || _Frequency > raw_uvy * _Frequency+_Phase;
-                if(black){
-                    col = float4(0,0,0,1);
-                    return col;
-                }
+                float blackness =  max(_Frequency - ((ex_uvy * _Frequency+_Phase)),  _Frequency > (raw_uvy * _Frequency+_Phase));
+                // if(black){
+                //     col = float4(0,0,0,1);
+                //     return col;
+                // }
                  
 
                 
@@ -109,6 +121,9 @@ Shader "Unlit/Sekisou"
                 float3 gray = float3(1,1,1) * gamma;
                 gray = float3(0.3,0.3,0.3);
                 col.xyz = saturation * col + (1-saturation) * gray;
+                col.xyz *=  1-min(1, max(0, blackness*0.05));
+                col.xyz *= rand(i.uv, 100)*0.5+0.5;
+                col.xyz *= 1.3;
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;

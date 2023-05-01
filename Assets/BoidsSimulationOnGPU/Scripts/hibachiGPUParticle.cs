@@ -204,6 +204,7 @@ namespace BoidsSimulationOnGPU
             // バッファを破棄
             ReleaseBuffer();
         }
+        public bool forceLoop = false;
 
         void OnDrawGizmos()
         {
@@ -246,9 +247,11 @@ namespace BoidsSimulationOnGPU
         public bool Refreshing;
         [ContextMenu("Play")]
         public void PlayScene(){
+            
            Refreshing = true;
            time_last = Time.time;
            Ending = false;
+           endingSafety = true;
            SekisouManager.resetForScene();
         }
         public bool Ending;
@@ -258,8 +261,15 @@ namespace BoidsSimulationOnGPU
             endingTime = Time.time - time_last;
         }
         int endBotModeId = 3;
+        bool endingSafety = true;
 
         void sceneControl(){
+            if(false && swingQueue == 0){
+                Debug.Log("Swing");
+                this.startSwing();
+            }
+            swingQueue = 0;
+
             if(oscmanager.botMode == 0 && botMode != 0){
                 Debug.Log("play");
                 this.PlayScene();
@@ -273,8 +283,14 @@ namespace BoidsSimulationOnGPU
 
             if(Ending &&  (Time.time - time_last) - endingTime > endingbuffer){
                 SekisouManager.PhaseUp();
-                currentSceneId = (currentSceneId + 1)%SceneCount;
+                if(endingSafety) currentSceneId = (currentSceneId + 1)%SceneCount;
+                endingSafety = false;
+                if(forceLoop) PlayScene();
             }
+
+        }
+
+        public void SuperReset(){
 
         }
         void LateUpdate(){
@@ -340,9 +356,6 @@ namespace BoidsSimulationOnGPU
                 int v = Mathf.CeilToInt((tmp_ply_num-1)*Random.value);
                 // int v = i%422;
                 boidDataArr[i].Color1 = texA[u,v];
-                // boidDataArr[i].UV1 = boidDataArr[i].UV1*442.0f;
-                // boidDataArr[i].UV2 = new Vector2((float)u/(tmp_ply_num-1),(float)v/(tmp_ply_num-1));
-                // boidDataArr[i].UV2 = new Vector2((float)i*0.00001f,(float)i*0.00001f);
                 boidDataArr[i].UV2 = new Vector2(Random.value, Random.value);
                 // boidDataArr[i].Position = Vector3.Scale(new Vector3(boidDataArr[i].UV1.x-0.5f, boidDataArr[i].UV1.y-0.5f, 0) , tmp_pos_scl);
                 Vector4 a = (Vector4)texB[u,v];
@@ -351,8 +364,6 @@ namespace BoidsSimulationOnGPU
                 boidDataArr[i].Position = new Vector3(tmp.x, height, tmp.y) ;
                 //boidDataArr[i].lifeTime = -Random.value*5;
                 boidDataArr[i].lifeTime = -Random.value * (respawnLifeTime + 0.0f) - 1.0f;
-                // boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(Random.value-0.5f, Random.value-0.5f, 0) , tmp_pos_scl);
-                // boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , new Vector3(1.0f, 1.0f, 1.0f));
                 boidDataArr[i].targetPosition = Vector3.Scale(new Vector3(a.x-0.5f, a.y-0.5f, a.z-0.5f) , tmp_pos_scl);
                 // boidDataArr[i].Velocity = Random.insideUnitSphere * 0.1f;
                 // // boidDataArr[i].Velocity = Random.insideUnitSphere * 0.1f;
@@ -371,6 +382,13 @@ namespace BoidsSimulationOnGPU
             boidDataArr = null;
         }
         float time_last = 0.0f;
+        float time_swing_last;
+        int swingCount = 0;
+        int swingQueue = 0;
+        void startSwing(){
+            time_swing_last = Time.time;
+            swingCount += 0;
+        }
 
         // シミュレーション
         void Simulation()
@@ -460,6 +478,9 @@ namespace BoidsSimulationOnGPU
                 }
             }
             cs.SetBuffer(id, "_framePropsBufferRead", propsArrayBuffer[currentSceneId]);
+            cs.SetFloat("_swingTime", Time.time -  time_swing_last);
+            cs.SetFloat("_swingCount", swingCount);
+            cs.SetVector("_sekisouColor", Scenes[currentSceneId].sekisouColor);
             cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
         }
 

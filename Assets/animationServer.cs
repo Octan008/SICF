@@ -12,6 +12,7 @@ public class animationServer : MonoBehaviour
         public Vector3 RotationOffset;
         public Vector3 AnkerOffset;
     }
+    public Color sekisouColor;
     public Pcx.BakedPointCloud[] models;
     public Pcx.BakedPointCloud staticModel;
     // public PointCloudModel[] pcModels;

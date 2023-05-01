@@ -11,7 +11,7 @@ public class ZigSimOsc : MonoBehaviour {
     public int port = 10000;
     public float mult = 10.0f;
     public Transform hibachiRoot;
-    public Vector2 offset;
+    public Vector3 offset;
     public Vector3 offset_scale;
 
     private OscServer _server;
@@ -27,7 +27,13 @@ public class ZigSimOsc : MonoBehaviour {
     public Vector3 targetPosition;
     public bool debug_activator = false;
 
-    public int botMode;    
+    public int botMode;   
+    public int swingQueue;    
+    public int cameraValid = 0;
+    public int prev_cameraValid = 1;
+    public float camFading = 0;
+    bool camFadingnow = false;
+    public Material fading;
 
     // Use this for initialization
     [ContextMenu("Reset")]
@@ -45,6 +51,14 @@ public class ZigSimOsc : MonoBehaviour {
             (string address, OscDataHandle data) =>
             {
                botMode = (int)data.GetElementAsFloat(0);
+            }
+        );
+
+        _server.MessageDispatcher.AddCallback(
+            "/faceDetect",
+            (string address, OscDataHandle data) =>
+            {
+               cameraValid = (int)data.GetElementAsFloat(0);
             }
         );
         _server.MessageDispatcher.AddCallback(
@@ -65,7 +79,7 @@ public class ZigSimOsc : MonoBehaviour {
             "/ZIGSIM/octaniPad/arkitposition3",         
             (string address, OscDataHandle data) =>
             {
-                _arpos.z = -data.GetElementAsFloat(0);
+                _arpos.z = data.GetElementAsFloat(0);
             }
         );
 /*        _server.MessageDispatcher.AddCallback(
@@ -100,7 +114,7 @@ public class ZigSimOsc : MonoBehaviour {
             "/ZIGSIM/octaniPad/touch02",
             (string address, OscDataHandle data) =>
             {
-                targetPosition.x = -data.GetElementAsFloat(0);
+                targetPosition.x = data.GetElementAsFloat(0);
             }
         );
         _server.MessageDispatcher.AddCallback(
@@ -122,11 +136,32 @@ public class ZigSimOsc : MonoBehaviour {
     {
         // Debug.Log("botmode : "+botMode);
         //_light.color = _color;
+        // if(!camFadingnow && CamControl && cameraValid == 1){
         if(CamControl){
             //go.transform.position = (_arpos+shift - _criterion.position)*mult*hibachiRoot.localScale.x + _criterion.position;
-            go.transform.position = new Vector3(offset_scale.x*(-_arpos.x), offset_scale.y*(_arpos.y - offset.x), offset_scale.z* (-_arpos.z + offset.y));
+            go.transform.position = new Vector3(offset_scale.x*(_arpos.x - offset.x), offset_scale.y*(_arpos.y - offset.y), offset_scale.z* (_arpos.z - offset.z));
             Debug.Log(_arpos+shift);
             //Debug.Log(_arpos);
+        }
+        if(cameraValid == 0 && prev_cameraValid == 1 || cameraValid == 1 && prev_cameraValid == 0){
+            camFadingnow = true;
+        }
+        prev_cameraValid = cameraValid;
+        if(camFadingnow){
+            if(cameraValid == 0){
+                camFading += 0.1f;
+                camFading = Mathf.Min(camFading, 1.0f);
+                if(camFading == 1.0f){
+                    camFadingnow = false;
+                }
+            }else{
+                camFading -= 0.1f;
+                camFading = Mathf.Max(camFading, 0.0f);
+                if(camFading == 0.0f){
+                    camFadingnow = false;
+                }
+            }
+            fading.SetFloat("_Fading", camFading);
         }
         if (activatorCrontrol)
         {

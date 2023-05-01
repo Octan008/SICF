@@ -74,7 +74,7 @@ Shader "Unlit/hibachiNoiseBox"
                 n = max(0, min(1, n));
 
                 // col.xyz *= n;
-                col.xyz *= min(1, max(0, 1-z)) * 0.5;
+                col.xyz *= min(1, max(0, 1-z)) * 0.2;
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;

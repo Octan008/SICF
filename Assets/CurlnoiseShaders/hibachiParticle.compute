@@ -107,6 +107,8 @@ float _scaleOffset0, _scaleOffset1, _scaleOffset2, _scaleOffset3, _scaleOffset4,
 float _scaleOffset_static;
 
 float _handParticleRate, _staticParticleRate, swayingParticleRate;
+float _swingTime;
+float4 _sekisouColor;
 
 struct FrameProps{
 	float3 PositionOffset;
@@ -342,8 +344,9 @@ void IntegrateCS
 	//Setting
 	float height = 0.146;
 	float Floor = -height;
-	float raiseTime = 15.0f;
+	float raiseTime = 25.0f;
 	float4 grayParticleColor = float4(0.5,0.5,0.5,1);
+	int onFloor = 0;
 	
 
 	BoidData b = _BoidDataBufferWrite[P_ID];   // 現在のBoidデータを読み込む;
@@ -355,7 +358,7 @@ void IntegrateCS
 		b.lifeTime = -_particleLifeTime*rand(b.uv2, 0)-1;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
-		b.indivBoidsPileWeight = 1;
+		b.indivBoidsPileWeight = 0;
 		b.indivGravityWeight = 1;
 		b.indivTurblulanceWeight = 0;
 		b.mode = 0;
@@ -366,22 +369,31 @@ void IntegrateCS
 		b.lifeTime = -1;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
-		b.indivBoidsPileWeight = 1;
+		b.indivBoidsPileWeight = 0;
 		b.indivGravityWeight = 1;
-		b.indivTurblulanceWeight = 0;
+		b.indivTurblulanceWeight = 0.5;
 		b.mode = 0;
 	}
 
 	//生成前パーティクルの待機
 	if (b.lifeTime < 0) {
 		// float2 tmp = 
-		b.position = float3(_activator.x, height, _activator.z) + float3(b.uv2.x * 2 - 1, 0, b.uv2.y * 2 - 1) * 0.02;
+		b.position = float3(_activator.x, height, _activator.z) + float3(b.uv2.x * 2 - 1, 0, b.uv2.y * 2 - 1) * 0.01;
 		b.velocity *= 0;
 	}
-	//床落ちパーティクルの滞留		
-	if(b.position.y < Floor+0.001 && b.mode == 0){
-		b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 10, 0.1);
-		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, 0.1);
+	//床落ちパーティクルの滞留	
+		
+	if(b.mode == 0){
+		if(b.position.y < Floor+0.005){
+			b.indivBoidsPileWeight =lerp(b.indivBoidsPileWeight, 10, 0.5);
+			b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0.5, 0.5);
+			_gravityFade = 0;
+			onFloor = 1;
+		}
+		else{
+			b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 1, 0.1);
+			b.indivTurblulanceWeight = lerp(b.indivTurblulanceWeight, 0.3, 0.1);
+		}
 	}
 	if(!_endingScene)b.size = max(0, min(1, b.lifeTime)) * 0.5; 
 	float3 target_fin = b.target;
@@ -415,22 +427,37 @@ void IntegrateCS
 	float2 new_uv = b.uv2;
 	float turbulanceFading = 0.04;
 	float stopTimeInv = 0.05;
-	float firstTurblulance = 1;
+	float firstTurblulance = 2;
 	float topTimeoffset = 20;
 	float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
 	// float sizeFin = b.size;
 	float target_scale = 0.005;
+
+	// float turbulanceFading = 0.2;
+	// float stopTimeInv = 0.2;
+	// float firstTurblulance = 2;
+	// float topTimeoffset = 10;
+	// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
+	// // float sizeFin = b.size;
+	// float target_scale = 0.005;
 	
 
 	// 22222
 	if(b.mode == 2 && b.lifeTime > raiseTime){
-		float timeshift = (b.position.x - 0.2);
+		// float timeshift = (b.position.x - 0.2) - rand(b.uv2, 0) * 0.03;
+		float timeshift = (b.position.y - 0.2) - rand(b.uv2, 0) * 0.03;
 		float settleFading = 3;
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
 		b.indivBoidsPileWeight = lerp(b.indivTargetWeight, 0, 0.01);
 		float4x4 rotMat_center = eulerAnglesToRotationMatrix(eularAngles2radian(float3(0,_Time*2,0)));
 		FrameProps frameprop = _framePropsBufferRead[0];
-		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , 3));
+		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , _curretSceneFrameCount));
+		// if(sceneIdentifier == _curretSceneFrameCount-2){
+		// 	_targetFade = 0;
+		// }
+		// else{
+		// 	_targetFade = 1;
+		// }
 		frameprop = _framePropsBufferRead[sceneIdentifier];
 		if(b.animFrame != sceneIdentifier){
 			b.indivTurblulanceWeight = firstTurblulance;
@@ -444,12 +471,13 @@ void IntegrateCS
 		target_fin = t2.xyz*target_scale;
 		target_fin = mul(rotMat, target_fin - frameprop.AnkerOffset ) +  frameprop.AnkerOffset;
 		target_fin += frameprop.PositionOffset;
-		float targetTimeShift = (target_fin.x - 0.2)*settleFading + 1;
+		float targetTimeShift = max(0, (target_fin.x - 0.2)*settleFading + 1);
 		turbulanceFading *= targetTimeShift;
+		// if(sceneIdentifier != _curretSceneFrameCount-2) 
 		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 
-		target_fin = mul(rotMat_center, target_fin);
-		float mulmul = min(max(0.5,1-4*length(b.position- target_fin)), 1);
+		if(_currentSceneId != 3) target_fin = mul(rotMat_center, target_fin);
+		float mulmul = min(max(0.8,1-4*length(b.position- target_fin)), 1);
 		if(!_endingScene) b.size *= mulmul * mulmul * 1.5;
 		
 	}
@@ -483,7 +511,7 @@ void IntegrateCS
 		b.indivBoidsPileWeight = lerp(b.indivBoidsPileWeight, 5, 0.1);
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 0, 0.1);
 		b.indivTurblulanceWeight = lerp(b.indivTurblulanceWeight, 0, 0.1);
-		tmp_color2 = float4(0,1,0,1);
+		// tmp_color2 = _sekisouColor;
 		_targetFade = b.indivTargetWeight;
 		_gravityFade = b.indivGravityWeight;
 		_boidPileFade = b.indivBoidsPileWeight/5;
@@ -493,7 +521,7 @@ void IntegrateCS
 
 
 	if(b.position.y < Floor+0.01 && b.mode == 0){
-		float flooring_lerp = 0.1;
+		float flooring_lerp = 0.01;
 		b.position.y = lerp(b.position.y, Floor, flooring_lerp);
 		b.velocity.y = lerp(b.velocity, 0, flooring_lerp);
 	}
@@ -511,12 +539,13 @@ void IntegrateCS
 		activatorphase = 1;
 		
 		// // 壁に近づいたら反発する力を与える
-		if(b.mode != 2 && b.mode != 4)force += avoidWall(b.position) * _AvoidWallWeight; 
+		if(b.mode != 2 && b.mode != 4 && !onFloor) force += avoidWall(b.position) * _AvoidWallWeight; 
 		float lw = min(2.0, 1.0/max(0.0001, length(b.position- target_fin)));
 		_targetFade *= b.indivTargetWeight;
 
-		if(!_endingScene) force += (targetForce(b.position, target_fin) *10 - b.velocity*1*lw) * _targetFade * _targetWeight * min(1, b.indivTargetWeight);
-		force += CurlNoise(b.position*50, _Time*3) *  _turbulanceFade * _turbulanceWeight * b.indivTurblulanceWeight;
+		// if(!_endingScene) 
+		force += (targetForce(b.position, target_fin) *10 - b.velocity*1*lw) * _targetFade * _targetWeight * min(1, b.indivTargetWeight);
+		force += CurlNoise(b.position*100, _Time*3) *  _turbulanceFade * _turbulanceWeight * b.indivTurblulanceWeight;
 		force += float3(0,-1,0) * _gravityWeight * _gravityFade * b.indivGravityWeight;
 		force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade) * b.indivBoidsPileWeight;
 
@@ -524,14 +553,17 @@ void IntegrateCS
 		b.color1 = lerp(grayParticleColor, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
 		if(_endingScene) {
 			// b.color1 = lerp(b.color1, float4(0.8,1, 0.8,1)*0.5, 0.1);
-			b.color1 = float4(0.5,1, 0.5,1);
+			// b.color1 = float4(0.5,1, 0.5,1) * 0.5;
+			b.color1 = _sekisouColor;
 			b.size = lerp(1, 0.0, min(1, max(0, 0.1 *( _Time - _endingTime) )));
 		}
 		force = limit(force, _MaxSteerForce);           // 操舵力を制限
 		b.velocity *= 0.95;
-		b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
+		if(!onFloor)b.velocity += force * _DeltaTime;          // 操舵力を速度に適用
+		else b.velocity.xz += force.xz * _DeltaTime;          // 操舵力を速度に適用
 		b.velocity = limit(b.velocity, _MaxSpeed); // 速度を制限
-		b.position += b.velocity * _DeltaTime;     // 位置を更新		
+		if(!onFloor) b.position += b.velocity * _DeltaTime;     // 位置を更新		
+		else  b.position.xz +=  b.velocity.xz * _DeltaTime; 
 	}
 	_BoidDataBufferWrite[P_ID] = b;            // 計算結果を書き込む
 }
