@@ -85,7 +85,7 @@ int _emitParticles;
 int _startingScene;
 int _endingScene;
 float _endingTime;
-float _particlelifeTime;
+float _particleLifeTime;
 float3 _position_offset, _anker_offset, _rotation_offset, _scale_offset;
 
 float _CurlNoiseWeight; // ノイズによる操舵力の重み
@@ -116,9 +116,9 @@ struct FrameProps{
 
 StructuredBuffer<FrameProps> _framePropsBufferRead;
 
-int currentSceneId;
-int curretSceneFrameCount;
-int currentSceneFrameId;
+int _currentSceneId;
+int _curretSceneFrameCount;
+int _currentSceneFrameId;
 // SamplerState sampler_point_clamp;
 SamplerState sampler_point_clamp;
 
@@ -339,8 +339,8 @@ void IntegrateCS
 	b.lifeTime += _DeltaTime;
 	_endingScene = _endingScene &&( _Time - _endingTime - 10*length(b.position.xz) > 0);
 	if(_startingScene){
-		b.lifeTime = -_particlelifeTime*rand(b.uv2, 0)-1;
-		// b.lifeTime -= _particlelifeTime;
+		b.lifeTime = -_particleLifeTime*rand(b.uv2, 0)-1;
+		// b.lifeTime -= _particleLifeTime;
 		// b.position = float3(_activator.x,8,_activator.z) + float3(rand(b.position.xy)*2-1, 0, rand(b.position.xz)*2-1)*2;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
@@ -349,7 +349,7 @@ void IntegrateCS
 		b.indivTurblulanceWeight = 0;
 		b.mode = 0;
 	}
-	if(b.lifeTime > _particlelifeTime && _emitParticles == 1){
+	if(b.lifeTime > _particleLifeTime && _emitParticles == 1){
 		b.lifeTime = -1;
 		b.velocity = float3(0,0,0);
 		b.indivTargetWeight = 0;
@@ -382,8 +382,6 @@ void IntegrateCS
 		}
 		if(b.indivTurblulanceWeight > 0.99 && rand(b.uv2, 1) < 0.9) {
 			b.mode = 2;
-			// b.indivTurblulanceWeight = 0;
-			// if(!_endingScene)b.size = 4;
 		}
 		else{
 			b.mode = 1;
@@ -435,31 +433,6 @@ void IntegrateCS
 			t2 = GetPosFromTex(sceneIdentifier,  float2(rand(b.uv2, 0), rand(b.uv2, 100)));
 			c2 = GetColorFromTex(sceneIdentifier,  float2(rand(b.uv2, 0), rand(b.uv2, 100)));
 		}
-		// if (sceneIdentifier == 0){
-		// 	t2 = _posTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex0.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);			
-		// }
-		// if (sceneIdentifier == 1){			
-		// 	t2 = _posTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex1.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// }
-		// if ( sceneIdentifier== 2){					
-			
-		// 	t2 = _posTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex2.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// }
-		// if (sceneIdentifier == 3){			
-		// 	t2 = _posTex3.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex3.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// }
-		// if (sceneIdentifier == 4){			
-		// 	t2 = _posTex4.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex4.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// }
-		// if (sceneIdentifier == 5){			
-		// 	t2 = _posTex5.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// 	c2 = _colTex5.SampleLevel(sampler_point_clamp, float2(rand(b.uv2, 0), rand(b.uv2, 100)), 0);
-		// }
 		float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(frameprop.RotationOffset+_rotation_offset));
 		target_scale = frameprop.ScaleOffset;
 		tmp_color2 = lerp(b.color2, c2, 0.9);
@@ -473,10 +446,6 @@ void IntegrateCS
 		target_fin = mul(rotMat_center, target_fin);
 		float mulmul = min(max(0.5,1-4*length(b.position- target_fin)), 1);
 		if(!_endingScene) b.size *= mulmul * mulmul*2;
-		// b.size *= 2;
-		// b.size = mulmul * mulmul*0.5;
-		// b.size = 0.5;
-		// b.size = lerp(b.size, mulmul * mulmul, 0.5);
 	}
 	if(_endingScene){
 		b.indivGravityWeight = lerp(b.indivGravityWeight, 1, 0.1);
@@ -501,29 +470,18 @@ void IntegrateCS
 	if(b.lifeTime >= 0.0 || _endingScene){
 		float3 force = float3(0.0, 0.0, 0.0);
 		float3 boidforce = _BoidForceBufferRead[P_ID]; // 操舵力を読み込む
-
-		// b.color1 = lerp(b.color2, _tex2.SampleLevel(sampler_point_clamp, b.uv2, 0), 0.9);
-		// _scaleOffset2.y *= 4;
-		// _scaleOffset2.x *= 0.3;
-		// float3 target_text = float3(b.uv2-0.5f, 0) * float3(_scaleOffset2.xy,1);
-		
 		float circlePhase = min(((10*_Circle - length(b.position))/10*_Circle)*10, 1);//内側が1
 		circlePhase=1;
-		// b.size = circlePhase;
 		float targetPhase = 0;
-		// float3 target = lerp(b.target, target_text, max(_targetFade, circlePhase));
 
 		circlePhase = max(0, circlePhase - _targetFade);
 		float tmp_t = 0.5;
 		float activatorphase = max(0.0, (tmp_t-length(b.position.xz-_activator.xz))/tmp_t);
 		activatorphase = 1;
-		// b.indivTargetWeight =  max(0.0,lerp(b.indivTargetWeight, 1, activatorphase*_targetFade));
-		// b.indivTargetWeight = 0.0;
 		
 		// // 壁に近づいたら反発する力を与える
 		force += avoidWall(b.position) * _AvoidWallWeight; 
 		float lw = min(2.0, 1.0/max(0.0001, length(b.position- target_fin)));
-		// force += (targetForce(b.position, target) *10 - b.velocity*5) * targetPhase;//* _TargetWeight;
 		_targetFade *= b.indivTargetWeight;
 
 		force += (targetForce(b.position, target_fin) *10 - b.velocity*1*lw) * _targetFade * _targetWeight * min(1, b.indivTargetWeight);
@@ -531,14 +489,10 @@ void IntegrateCS
 		force += float3(0,-1,0) * _gravityWeight * _gravityFade * b.indivGravityWeight;
 		force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade) * b.indivBoidsPileWeight;
 
-		float4 tmp_color1 = float4(0.5,0.5,0.5,1);
-		// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
-		// float2 location_uv = (b.position.xy / _scaleOffset1.xy)+0.5f;
-		// float4 tmp_color3 = _tex0.SampleLevel(sampler_point_clamp, location_uv, 0);
+		float4 grayParticleColor = float4(1,0.5,0.5,1);
 		
-		tmp_color2 *= 1 + ((sin((Pnoise(b.position*0.5).x+_Time*0.01)*200)+1) * 0.5 * 0.2);
-		// tmp_color2 *= 1 + Pnoise(b.position*1).x + _Time*0.02;
-		b.color1 = lerp(tmp_color1, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
+		// tmp_color2 *= 1 + ((sin((Pnoise(b.position*0.5).x+_Time*0.01)*200)+1) * 0.5 * 0.2);
+		b.color1 = lerp(grayParticleColor, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
 		if(_endingScene) {
 			b.color1 = float4(0.8,1, 0.8,1)*0.5;
 			b.size = lerp(1, 0.0, min(1, max(0, 0.1 *( _Time - _endingTime) )));

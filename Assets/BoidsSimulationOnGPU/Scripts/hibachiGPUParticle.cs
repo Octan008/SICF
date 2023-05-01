@@ -401,20 +401,22 @@ namespace BoidsSimulationOnGPU
             cs.SetFloat("_gravityWeight", _gravityWeight);
             cs.SetFloat("_boidPileWeight", _boidPileWeight);
 
-
+            cs.SetInt("_currentSceneId", currentSceneId);
+            cs.SetInt("_curretSceneFrameCount", scenes[currentSceneId].numFrames);
+            // cs.SetInt("_currentSceneFrameId", currentSceneFrameId);
             cs.SetBuffer(id, "_BoidForceBufferRead", _boidForceBuffer);
             cs.SetBuffer(id, "_BoidDataBufferWrite", boidDataBuffer);
-            cs.SetTexture(id, "_tex0", operationBase.texC);
-            cs.SetTexture(id, "_tex2", operationBase.texB);
+            // cs.SetTexture(id, "_tex0", operationBase.texC);
+            // cs.SetTexture(id, "_tex2", operationBase.texB);
             cs.SetTexture(id, "_tex1", operationBase.texA);
             for(int i=0; i<6; i++){ 
                 if(i < scenes[currentSceneId].numFrames){
                     cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(i));
                     cs.SetTexture(id, "_colTex"+(i.ToString()), scenes[currentSceneId].colorMap(i));
-                    cs.SetVector("_posOffset"+(i.ToString()), scenes[currentSceneId].list_PositionOffsets[i]);
-                    cs.SetVector("_rotOffset"+(i.ToString()), scenes[currentSceneId].list_RotationOffsets[i]);
-                    cs.SetVector("_ankerOffset"+(i.ToString()), scenes[currentSceneId].list_AnkerOffsets[i]);
-                    cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[currentSceneId].list_Scales[i]);
+                    // cs.SetVector("_posOffset"+(i.ToString()), scenes[currentSceneId].list_PositionOffsets[i]);
+                    // cs.SetVector("_rotOffset"+(i.ToString()), scenes[currentSceneId].list_RotationOffsets[i]);
+                    // cs.SetVector("_ankerOffset"+(i.ToString()), scenes[currentSceneId].list_AnkerOffsets[i]);
+                    // cs.SetFloat("_scaleOffset"+(i.ToString()), scenes[currentSceneId].list_Scales[i]);
                 }
                 else{
                     cs.SetTexture(id, "_posTex"+(i.ToString()), scenes[currentSceneId].positionMap(0));
