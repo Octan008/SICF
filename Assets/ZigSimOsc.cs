@@ -146,23 +146,23 @@ public class ZigSimOsc : MonoBehaviour {
         if(cameraValid == 0 && prev_cameraValid == 1 || cameraValid == 1 && prev_cameraValid == 0){
             camFadingnow = true;
         }
-        prev_cameraValid = cameraValid;
-        if(camFadingnow){
-            if(cameraValid == 0){
-                camFading += 0.1f;
-                camFading = Mathf.Min(camFading, 1.0f);
-                if(camFading == 1.0f){
-                    camFadingnow = false;
-                }
-            }else{
-                camFading -= 0.1f;
-                camFading = Mathf.Max(camFading, 0.0f);
-                if(camFading == 0.0f){
-                    camFadingnow = false;
-                }
-            }
-            fading.SetFloat("_Fading", camFading);
-        }
+        // prev_cameraValid = cameraValid;
+        // if(camFadingnow){
+        //     if(cameraValid == 0){
+        //         camFading += 0.1f;
+        //         camFading = Mathf.Min(camFading, 1.0f);
+        //         if(camFading == 1.0f){
+        //             camFadingnow = false;
+        //         }
+        //     }else{
+        //         camFading -= 0.1f;
+        //         camFading = Mathf.Max(camFading, 0.0f);
+        //         if(camFading == 0.0f){
+        //             camFadingnow = false;
+        //         }
+        //     }
+        //     fading.SetFloat("_Fading", camFading);
+        // }
         if (activatorCrontrol)
         {
             activator.position = Vector3.Lerp(activator.position, targetPosition, 0.5f);

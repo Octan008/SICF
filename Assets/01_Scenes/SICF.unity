@@ -326,11 +326,11 @@ MonoBehaviour:
   port: 9997
   mult: 1
   hibachiRoot: {fileID: 311637345}
-  offset: {x: 0.18, y: -0.27, z: 0.53}
-  offset_scale: {x: 1, y: 1, z: 1}
+  offset: {x: -0.05, y: -0.1, z: 5.58}
+  offset_scale: {x: 1.5, y: 1.5, z: 1.5}
   _criterion: {fileID: 831113295}
   shift: {x: 0.024, y: -0.02, z: -0.436}
-  CamControl: 0
+  CamControl: 1
   activatorCrontrol: 1
   activator: {fileID: 2114657749}
   targetPosition: {x: 0, y: 0, z: 0}
@@ -990,7 +990,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 23ee16ce8bf19a94eb1dc18bd9031c82, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.036
+      value: 0.0039
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 23ee16ce8bf19a94eb1dc18bd9031c82, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2247,7 +2247,7 @@ MonoBehaviour:
   AvoidWallWeight: 10
   DisplayScale: 0.02
   WallCenter: {x: 0, y: 0, z: 0}
-  WallSize: {x: 0.395, y: 0.292, z: 0.4}
+  WallSize: {x: 0.395, y: 0.292, z: 0.6}
   _targetWeight: 1
   _turbulanceWeight: 0.5
   _gravityWeight: 0.4
@@ -3708,14 +3708,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1088508828}
-  m_LocalRotation: {x: -0, y: -0.7071068, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.20350002, y: 0.21, z: 0.562}
+  m_LocalRotation: {x: 0, y: -0.67559016, z: 0, w: 0.7372774}
+  m_LocalPosition: {x: -0.163, y: 0.21, z: 0.562}
   m_LocalScale: {x: 1.5, y: 0.72, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1670834284}
   m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -85, z: 0}
 --- !u!64 &1088508830
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3750,7 +3750,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3258ebdd5602e51499b55b9c20113b91, type: 2}
+  - {fileID: 2100000, guid: f1f0e55c0e914c44c867773c77d27f6a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4120,14 +4120,14 @@ MonoBehaviour:
   haveStaticObj: 0
   sekisouColor: {r: 0.6451201, g: 0.6509434, b: 0.48206657, a: 0}
   models:
-  - {fileID: 5879066665630305242, guid: 4c85861ebcdca204caedd97c4d4fbdac, type: 3}
   - {fileID: 5879066665630305242, guid: eacbde6c103dabc4495fc7970f7c7784, type: 3}
   - {fileID: 5879066665630305242, guid: f0fa6120a5942f04590f7616feb24072, type: 3}
+  - {fileID: 5879066665630305242, guid: 4c85861ebcdca204caedd97c4d4fbdac, type: 3}
   staticModel: {fileID: 0}
   refGOs:
-  - {fileID: 1744640224}
   - {fileID: 1574247349}
   - {fileID: 1719821498}
+  - {fileID: 1744640224}
   refStaticGO: {fileID: 0}
   list_PositionOffsets:
   - {x: 0, y: 0.08, z: -0.85}
@@ -4282,7 +4282,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 9e90819b98eb22b4586085c6e04e5795, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.028
+      value: -0.0338
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 9e90819b98eb22b4586085c6e04e5795, type: 3}
       propertyPath: m_LocalPosition.z
@@ -4636,18 +4636,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   haveStaticObj: 0
-  sekisouColor: {r: 0.3965379, g: 0.4508927, b: 0.6320754, a: 1}
+  sekisouColor: {r: 0.3484336, g: 0.38600042, b: 0.509434, a: 1}
   models:
+  - {fileID: 5879066665630305242, guid: 85718d18b12fb19439f72f20d695ef39, type: 3}
   - {fileID: 5879066665630305242, guid: e827aa0a094cb464facfc32e94a6c9d0, type: 3}
   - {fileID: 5879066665630305242, guid: 63beffbba622a834792db418c1e80fba, type: 3}
   - {fileID: 5879066665630305242, guid: e6078367cf7f1a743a10fe9261c76453, type: 3}
-  - {fileID: 5879066665630305242, guid: 85718d18b12fb19439f72f20d695ef39, type: 3}
   staticModel: {fileID: 0}
   refGOs:
+  - {fileID: 1696451395}
   - {fileID: 161945235}
   - {fileID: 1277694186}
   - {fileID: 2052571503}
-  - {fileID: 1696451395}
   refStaticGO: {fileID: 0}
   list_PositionOffsets:
   - {x: -0.02, y: 0.08, z: -0.79}
@@ -5007,14 +5007,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1636330898}
-  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0.2, y: 0.26, z: 0.551}
+  m_LocalRotation: {x: 0, y: 0.67559016, z: 0, w: 0.7372774}
+  m_LocalPosition: {x: 0.155, y: 0.26, z: 0.551}
   m_LocalScale: {x: 1.5, y: 0.81, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1670834284}
   m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 85, z: 0}
 --- !u!64 &1636330900
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -5049,7 +5049,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 3258ebdd5602e51499b55b9c20113b91, type: 2}
+  - {fileID: 2100000, guid: f1f0e55c0e914c44c867773c77d27f6a, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5242,7 +5242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Mat: {fileID: 2100000, guid: 016764ea2c9bccd488f207dcbc58ec1b, type: 2}
-  phase: 100
+  phase: 0
   phaseupconpleted: 0
   phase_f: 0
 --- !u!1 &1670834283
@@ -5497,7 +5497,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 01b15ac81635f474b9eda343b58ed9bc, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.114
+      value: 0.069000006
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 01b15ac81635f474b9eda343b58ed9bc, type: 3}
       propertyPath: m_LocalPosition.z
@@ -6533,7 +6533,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 5cafda3a0a386ce42a081bf1ca622258, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.079
+      value: -0.0848
       objectReference: {fileID: 0}
     - target: {fileID: -364223573239433514, guid: 5cafda3a0a386ce42a081bf1ca622258, type: 3}
       propertyPath: m_LocalPosition.z

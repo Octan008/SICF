@@ -60,6 +60,7 @@ Shader "Unlit/hibachiNoiseBox"
             fixed4 frag (v2f i) : SV_Target
             {
                 // sample the texture
+                if(_IsHorizontal == 1) i.uv = float2(i.uv.y, i.uv.x);
                 fixed4 col = tex2D(_MainTex, i.uv);
                 col = 1- col;
                 col *= float4(1,1,1,1);
@@ -74,7 +75,7 @@ Shader "Unlit/hibachiNoiseBox"
                 n = max(0, min(1, n));
 
                 // col.xyz *= n;
-                col.xyz *= min(1, max(0, 1-z)) * 0.2;
+                col.xyz *= min(1, max(0, 1-z)) * 0.55;
                 // apply fog
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;

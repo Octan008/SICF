@@ -321,7 +321,7 @@ float4 GetColorFromTex(int id, float2 uv){
 	else if(id == 3)return _colTex3.SampleLevel(sampler_point_clamp,uv, 0);
 	else if(id == 4) return  _colTex4.SampleLevel(sampler_point_clamp,uv, 0);
 	else if(id == 5) return _colTex5.SampleLevel(sampler_point_clamp,uv, 0);
-	else return float4(0,0,0,0);
+	else return float4(1,1,1,1);
 }
 
 
@@ -451,18 +451,21 @@ void IntegrateCS
 		b.indivBoidsPileWeight = lerp(b.indivTargetWeight, 0, 0.01);
 		float4x4 rotMat_center = eulerAnglesToRotationMatrix(eularAngles2radian(float3(0,_Time*2,0)));
 		FrameProps frameprop = _framePropsBufferRead[0];
-		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv) , _curretSceneFrameCount));
-		// if(sceneIdentifier == _curretSceneFrameCount-2){
-		// 	_targetFade = 0;
-		// }
-		// else{
-		// 	_targetFade = 1;
-		// }
+		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv)-1 , _curretSceneFrameCount));
+		// int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv)-1 , _curretSceneFrameCount+1));
+
 		frameprop = _framePropsBufferRead[sceneIdentifier];
 		if(b.animFrame != sceneIdentifier){
 			b.indivTurblulanceWeight = firstTurblulance;
 			b.animFrame = sceneIdentifier;
-		}			
+		}		
+		if(sceneIdentifier == _curretSceneFrameCount){
+			_targetFade = 0;
+			b.indivTurblulanceWeight = firstTurblulance;
+		}
+		else{
+			_targetFade = 1;
+		}	
 		float4 t2 = GetPosFromTex(sceneIdentifier,  b.uv2);
 		float4 c2 = GetColorFromTex(sceneIdentifier,  b.uv2);
 		float4x4 rotMat = eulerAnglesToRotationMatrix(eularAngles2radian(frameprop.RotationOffset+_rotation_offset));
@@ -473,12 +476,12 @@ void IntegrateCS
 		target_fin += frameprop.PositionOffset;
 		float targetTimeShift = max(0, (target_fin.x - 0.2)*settleFading + 1);
 		turbulanceFading *= targetTimeShift;
-		// if(sceneIdentifier != _curretSceneFrameCount-2) 
+		if(sceneIdentifier != _curretSceneFrameCount) 
 		b.indivTurblulanceWeight =lerp(b.indivTurblulanceWeight , 0, turbulanceFading);
 
 		if(_currentSceneId != 3) target_fin = mul(rotMat_center, target_fin);
 		float mulmul = min(max(0.8,1-4*length(b.position- target_fin)), 1);
-		if(!_endingScene) b.size *= mulmul * mulmul * 1.5;
+		if(!_endingScene && sceneIdentifier != _curretSceneFrameCount) b.size *= mulmul * mulmul * 1.5;
 		
 	}
 	if(b.mode == 4 &&  b.lifeTime > raiseTime){
@@ -539,7 +542,7 @@ void IntegrateCS
 		activatorphase = 1;
 		
 		// // 壁に近づいたら反発する力を与える
-		if(b.mode != 2 && b.mode != 4 && !onFloor) force += avoidWall(b.position) * _AvoidWallWeight; 
+		if((b.mode != 2 && b.mode != 4 && !onFloor) || _currentSceneId != 3 ) force += avoidWall(b.position) * _AvoidWallWeight; 
 		float lw = min(2.0, 1.0/max(0.0001, length(b.position- target_fin)));
 		_targetFade *= b.indivTargetWeight;
 
@@ -549,6 +552,9 @@ void IntegrateCS
 		force += float3(0,-1,0) * _gravityWeight * _gravityFade * b.indivGravityWeight;
 		force += boidforce * _boidPileFade * _boidPileWeight * (1-_targetFade) * b.indivBoidsPileWeight;
 
+		float noireNoise = Pnoise(b.position, 60, _Time*0.01);
+		noireNoise = noireNoise * 0.3 + 0.7;
+		tmp_color2 *= noireNoise;
 		
 		b.color1 = lerp(grayParticleColor, tmp_color2, min(max(0,1-0.5*length(b.position- target_fin)), _targetFade));
 		if(_endingScene) {
