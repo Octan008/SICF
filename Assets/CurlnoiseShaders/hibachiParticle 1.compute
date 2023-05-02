@@ -427,7 +427,7 @@ void IntegrateCS
 	}
 	float2 new_uv = b.uv2;
 	float turbulanceFading = 0.04;
-	float stopTimeInv = 0.05;
+	float stopTimeInv = 0.08;
 	float firstTurblulance = 2;
 	float topTimeoffset = 20;
 	// float4 tmp_color2 = lerp(b.color2, _tex1.SampleLevel(sampler_point_clamp, new_uv, 0), 0.9);
@@ -447,13 +447,24 @@ void IntegrateCS
 	// 22222
 	if(b.mode == 2 && b.lifeTime > raiseTime){
 		// float timeshift = (b.position.x - 0.2) - rand(b.uv2, 0) * 0.03;
-		float timeshift = (b.position.y - 0.2) - rand(b.uv2, 0) * 0.03;
+		float timeshift = (b.position.y - 0.1) - rand(b.uv2, 0) * 0.03;
 		float settleFading = 3;
 		b.indivTargetWeight = lerp(b.indivTargetWeight, 1, 0.01);
 		b.indivBoidsPileWeight = lerp(b.indivTargetWeight, 0, 0.01);
 		float4x4 rotMat_center = eulerAnglesToRotationMatrix(eularAngles2radian(float3(0,_Time*2,0)));
 		FrameProps frameprop = _framePropsBufferRead[0];
-		int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv)-1 , _curretSceneFrameCount));
+		int swingShift = 0;
+		
+		//0503
+		if( (_swingTime +  timeshift*topTimeoffset)*stopTimeInv < 0){
+			swingShift = -1;
+		}
+		else{
+
+		}
+		int sceneIdentifier = floor(fmod(_swingCount+swingShift, _curretSceneFrameCount));
+		
+		// int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv)-1 , _curretSceneFrameCount));
 		// int sceneIdentifier = floor(fmod(floor((_Time + timeshift*topTimeoffset)*  stopTimeInv)-1 , _curretSceneFrameCount+1));
 
 		frameprop = _framePropsBufferRead[sceneIdentifier];

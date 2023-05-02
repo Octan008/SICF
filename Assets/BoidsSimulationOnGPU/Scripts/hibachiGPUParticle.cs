@@ -253,6 +253,7 @@ namespace BoidsSimulationOnGPU
            Ending = false;
            endingSafety = true;
            SekisouManager.resetForScene();
+           swingCount = 0;
         }
         public bool Ending;
         [ContextMenu("End")]
@@ -262,24 +263,34 @@ namespace BoidsSimulationOnGPU
         }
         int endBotModeId = 3;
         bool endingSafety = true;
+        
 
         void sceneControl(){
-            if(false && swingQueue == 0){
+            //0503
+            if(oscmanager.swingQueue == 1 && swingQueue == 0 || oscmanager.swingQueue == 0 && swingQueue == 1){
                 Debug.Log("Swing");
                 this.startSwing();
             }
-            swingQueue = 0;
+            
 
             if(oscmanager.botMode == 0 && botMode != 0){
                 Debug.Log("play");
                 this.PlayScene();
             }
-            botMode = oscmanager.botMode;
-
-            if(!Ending &&  (Time.time - time_last)  > Scenes[currentSceneId].sceneTimeLength){
+            
+            //0503どちらか
+            if(oscmanager.botMode == endBotModeId && botMode != endBotModeId){
+                Debug.Log("End");
                 EndScene();
-                
             }
+            
+
+            // //0503どちらか
+            // if(!Ending &&  (Time.time - time_last)  > Scenes[currentSceneId].sceneTimeLength){
+            //     EndScene();
+            // }
+            
+
 
             if(Ending &&  (Time.time - time_last) - endingTime > endingbuffer){
                 SekisouManager.PhaseUp();
@@ -287,6 +298,8 @@ namespace BoidsSimulationOnGPU
                 endingSafety = false;
                 if(forceLoop) PlayScene();
             }
+            botMode = oscmanager.botMode;
+            swingQueue = oscmanager.swingQueue;
 
         }
 
@@ -383,11 +396,12 @@ namespace BoidsSimulationOnGPU
         }
         float time_last = 0.0f;
         float time_swing_last;
-        int swingCount = 0;
+        public int swingCount = 0;
         int swingQueue = 0;
         void startSwing(){
+            Debug.Log("test");
             time_swing_last = Time.time;
-            swingCount += 0;
+            swingCount += 1;
         }
 
         // シミュレーション
@@ -479,7 +493,7 @@ namespace BoidsSimulationOnGPU
             }
             cs.SetBuffer(id, "_framePropsBufferRead", propsArrayBuffer[currentSceneId]);
             cs.SetFloat("_swingTime", Time.time -  time_swing_last);
-            cs.SetFloat("_swingCount", swingCount);
+            cs.SetInt("_swingCount", swingCount);
             cs.SetVector("_sekisouColor", Scenes[currentSceneId].sekisouColor);
             cs.Dispatch(id, threadGroupSize, 1, 1); // ComputeShaderを実行
         }

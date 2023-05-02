@@ -2227,7 +2227,7 @@ MonoBehaviour:
   trails: {fileID: 861175547}
   trailParticles: {fileID: 861175546}
   SekisouManager: {fileID: 1660295828}
-  MaxObjectNum: 50000
+  MaxObjectNum: 10000
   emitParticles: 1
   respawnLifeTime: 20
   _renderTrails: 1

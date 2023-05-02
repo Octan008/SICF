@@ -53,6 +53,14 @@ public class ZigSimOsc : MonoBehaviour {
                botMode = (int)data.GetElementAsFloat(0);
             }
         );
+        // _server.MessageDispatcher.AddCallback(
+        //     //0503
+        //     "/swingQueue",
+        //     (string address, OscDataHandle data) =>
+        //     {
+        //        swingQueue = (int)data.GetElementAsFloat(0);
+        //     }
+        // );
 
         _server.MessageDispatcher.AddCallback(
             "/faceDetect",
